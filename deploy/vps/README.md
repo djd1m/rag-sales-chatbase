@@ -1,0 +1,80 @@
+# N6 на VPS 78.17.53.233
+
+Каталог: `/home/rag-sales-chatbase`. Отдельный Compose-проект `rag-sales-chatbase`.
+Применять `docker-compose.yml` **вместе с** `compose.vps.yml`.
+`COMPOSE_FILE` в VPS-шаблоне также выбирает оба файла для обычного `docker compose`.
+Старый `compose.stand.yml` относится к другой машине и здесь не используется.
+
+## Окружение
+
+Приватный `.env` уже подготовлен, права 0600; пароли PostgreSQL/Redis и секрет
+сессий сгенерированы. Самостоятельно заполнить `OPENROUTER_API_KEY`.
+Ключи соседних проектов не копируются. `.env.vps.example` — публичный шаблон,
+содержащий только несекретные настройки и пустые поля ключей.
+
+Временный origin: `https://rag-sales.78.17.53.233.sslip.io`.
+Домен настроен в шаблоне, но это не означает, что сайт уже опубликован.
+При выборе своего домена поменять `N6_PUBLIC_ORIGIN` и `deploy/vps/site.Caddyfile`.
+Модели/14 квот сохранены. ЮKassa выключена. Заменять OpenRouter-ключ на DeepSeek-ключ
+в этой конфигурации нельзя: [исследование](../../docs/research/deepseek-2026-11-17.md).
+
+## Изоляция и ресурсы
+
+| Сервис | Лимит RAM | Примечание |
+|---|---:|---|
+| proxy | 96 МиБ | Модуль ограничения частоты сохранён |
+| web | 640 МиБ | V8 heap до 384 МиБ |
+| worker-index | 512 МиБ | V8 heap до 320 МиБ; штатная параллельность 1 |
+| db | 384 МиБ | shared_buffers=64MB вместо 2GB, до 40 соединений |
+| redis | 128 МиБ | maxmemory 64MB, noeviction и AOF |
+| migrate | 256 МиБ | Одноразовый процесс перед web/worker |
+
+Это ограничения контейнеров, не измеренное потребление под нагрузкой.
+Журналы каждого контейнера ограничены 3 × 10 МБ.
+
+Все данные проекта — в собственных Compose-томах. У db/redis/web/worker нет
+host-портов и общей proxy-сети. Только дверь `proxy` подключена к `proofwall_default`
+под уникальным alias `rag-sales-proxy`; `web` соседнего Proofwall не перекрывается.
+Диагностический порт двери — только `127.0.0.1:8086`.
+
+Внутренняя дверь доверяет XFF только точному адресу общего `proofwall-caddy-1`:
+`N6_TRUSTED_PROXY_CIDR` с маской /32. После пересоздания общего Caddy адрес может
+измениться; проверка запуска потребует обновить это поле. Внешний блок явно
+заменяет XFF фактическим адресом соединения. Rate limit 30 мутаций/120 чтений
+в минуту сохранён, исключение неизменяемой статики сохранено, CORS не добавляется.
+
+## Проверка и запуск
+
+```bash
+cd /home/rag-sales-chatbase
+bash scripts/vps.sh check
+bash scripts/vps.sh up
+bash scripts/vps.sh ps
+bash scripts/vps.sh logs --tail 60
+```
+
+`check` не печатает разрешённый Compose с ключами: проверяет заполненность,
+изоляцию, порт, RAM, журналы, read-only конфигурацию двери и фактический IP Caddy.
+`up` использует уже собранные образы, не запускает фоновую сборку или pull.
+До заполнения ключа штатный отказ Compose не обходится фиктивным значением.
+Платные startup probes приложения происходят только при настоящем запуске.
+
+Для последующей пересборки использовать отдельный ограниченный Buildx builder
+и после сборки удалить его кэш. Пример (плагин Buildx установлен):
+
+```bash
+docker buildx create --name rag-sales-build --driver docker-container --driver-opt memory=1800m --driver-opt memory-swap=2600m
+docker buildx build --builder rag-sales-build --load --target web -t n6-sufler-web:vps .
+docker buildx build --builder rag-sales-build --load --target worker -t n6-sufler-worker:vps .
+docker buildx build --builder rag-sales-build --load --target migrate -t n6-sufler-migrate:vps .
+docker buildx build --builder rag-sales-build --load -f proxy/Dockerfile -t caddy:2.8-n6-ratelimit-vps proxy
+docker buildx rm rag-sales-build
+```
+
+После успешного старта и проверки `/health` добавить `site.Caddyfile` в существующий
+`/home/proofwall/deploy/sslip/Caddyfile`, проверить `caddy validate` и выполнить
+`caddy reload` в `proofwall-caddy-1`. До этого новый маршрут в общий прокси не вносится.
+Остальные блоки общего Caddy и работающие проекты сохраняются.
+
+Сырые журналы сборки/проверок находятся в `.secrets/vps-adaptation/` и не публикуются.
+Фактические выполненные проверки и ограничения записываются в `validation.md`.

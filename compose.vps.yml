@@ -1,0 +1,60 @@
+# Надстройка для VPS 78.17.53.233. Применять ПОСЛЕ docker-compose.yml.
+# Общая сеть доступна только двери proxy; web/db/redis остаются в сети проекта.
+x-vps-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  proxy:
+    pull_policy: never
+    environment:
+      N6_TRUSTED_PROXY_CIDR: ${N6_TRUSTED_PROXY_CIDR:?укажите точный IPv4 общего Caddy с маской /32}
+    volumes:
+      - ./deploy/vps/proxy.Caddyfile:/etc/caddy/Caddyfile:ro
+    networks:
+      default:
+      vps-proxy:
+        aliases: [rag-sales-proxy]
+    mem_limit: 96m
+    cpus: 0.35
+    logging: *logging
+
+  web:
+    environment:
+      NODE_OPTIONS: --max-old-space-size=384
+    mem_limit: 640m
+    cpus: 0.75
+    logging: *logging
+
+  worker-index:
+    environment:
+      NODE_OPTIONS: --max-old-space-size=320
+    mem_limit: 512m
+    cpus: 0.75
+    logging: *logging
+
+  migrate:
+    environment:
+      NODE_OPTIONS: --max-old-space-size=192
+    mem_limit: 256m
+    cpus: 0.50
+    logging: *logging
+
+  db:
+    command: ["postgres", "-c", "shared_buffers=64MB", "-c", "max_connections=40", "-c", "work_mem=4MB", "-c", "maintenance_work_mem=64MB"]
+    mem_limit: 384m
+    cpus: 0.50
+    logging: *logging
+
+  redis:
+    command: ["sh", "-c", "exec redis-server --appendonly yes --maxmemory 64mb --maxmemory-policy noeviction --requirepass \"$$REDIS_PASSWORD\""]
+    mem_limit: 128m
+    cpus: 0.25
+    logging: *logging
+
+networks:
+  vps-proxy:
+    external: true
+    name: proofwall_default

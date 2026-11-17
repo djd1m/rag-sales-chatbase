@@ -1,0 +1,13 @@
+# Добавлять в общий Caddy только после успешного запуска web и proxy.
+rag-sales.78.17.53.233.sslip.io {
+    tls {
+        issuer acme {
+            disable_http_challenge
+        }
+    }
+    encode gzip zstd
+    reverse_proxy rag-sales-proxy:80 {
+        # Удаляем присланный извне XFF, передаём фактический адрес соединения.
+        header_up X-Forwarded-For {remote_host}
+    }
+}

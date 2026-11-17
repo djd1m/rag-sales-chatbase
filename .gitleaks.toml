@@ -1,0 +1,20 @@
+# Gitleaks: стандартные правила и узкое исключение для четырёх mock-значений.
+# Обоснование: tests/browser/widget-harness.ts использует loopback HTTP, BOTS в памяти
+# и fakeAnswerGateway; эти строки не открывают доступ к реальным сервисам.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Только проверенные константы локальной browser-оснастки"
+condition = "AND"
+paths = ['''(^|/)tests/browser/widget-harness\.ts$''']
+regexTarget = "secret"
+regexes = [
+  '''^PaidBotKey0123456789ab$''',
+  '''^NewBotKey0123456789abc$''',
+  '''^PubBotKey0123456789abc$''',
+  '''^harness\-secret\-0123456789abcdef0123456789abcdef$''',
+]

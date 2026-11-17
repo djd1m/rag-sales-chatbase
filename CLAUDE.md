@@ -1,0 +1,230 @@
+# N6 «Суфлёр» — контекст проекта
+
+Прочитать корневой `CLAUDE.md`, применимые `../../.claude/rules/`, политику моделей и телеметрию
+p-replicator, прежде чем реализовывать что-либо здесь. Общий toolkit (команды, хуки, навыки
+планирования и ревью) живёт в корневой `.claude/`; новый оркестратор в этом проекте не создаётся.
+
+## Что это
+
+ИИ-помощник для сайта малого бизнеса, клон Chatbase. Владелец вставляет адрес сайта и PDF — продукт
+читает страницы, режет текст на фрагменты, считает эмбеддинги в pgvector нашего Postgres и собирает
+бота, который отвечает посетителям **только по этим материалам**, и в КАЖДОМ ответе показывает, из
+какого фрагмента он взят. Нет подходящего фрагмента — «не знаю» и контакт компании. Бот ставится
+одним `<script>` на ЧУЖОЙ сайт (виджет в Shadow DOM), на бесплатном плане несёт бейдж — это главная
+петля роста. Контур — Россия/СНГ, интерфейс и ответы на русском. CJM — вариант **H** (ядро A «бейдж»
++ демо-страница из C + партнёрский минимум из B), принят **ВРЕМЕННО** (A-N6-008, ждёт владельца).
+
+**Статус на 28.09.2026: 18 фич roadmap `done`** (17 + `text-source`, A-N6-080) и работают на стенде **https://sufler.aicoding.space**
+(общий TLS-прокси машины, надстройка `compose.stand.yml`, env вне git — A-N6-037/042). Сверх исходного плана по решениям
+владельца: **живая оплата ЮKassa** (разовая, 30 дней, 990 / 4 900 ₽; без своего магазина `N6_PAYMENTS_MODE=off` — экран
+интереса; ключи — `bash scripts/stand-set-yookassa.sh`), **партнёрская программа** (20 % от полученного после удержания ЮKassa,
+12 мес, холд 30 дней, выплата СБП от 1 000 ₽; студии — та же комиссия), **удаление аккаунта** (72 ч, без отмены, 402-ФЗ 5 лет
+обезличенно, долг партнёру не сгорает), **усечение по бюджету** вместо отказа (предпросмотр 120 000 токенов), **обновление и
+удаление источника**, пробел на стыке элементов при извлечении текста. Контракты по ВЫДАННОМУ адресу: `embed` → 0, `long-job`
+→ 0, `model-cost` → 0, `webhook` → 2 честно (ЮKassa не подписывает). Проверки (28.09, слитое дерево трёх правок бэклога): образ 1157/1157, браузер (Playwright) 715/715.
+**Повторить проект с нуля — [`docs/REPRODUCE.md`](docs/REPRODUCE.md); грабли — [`docs/Refinement.md`](docs/Refinement.md);
+что осталось — [`docs/BACKLOG.md`](docs/BACKLOG.md).**
+
+<details><summary>История статуса (25–26.09)</summary>
+
+**Статус на 25.09.2026: фича `foundation` реализована** (монорепо, миграция 001 с pgvector, отказ
+старта по 14 `QUOTA_*`, вход/выход, `/health`; образы собраны, тесты зелёные в образе на настоящих
+Postgres+pgvector и Redis) — квитанция [`docs/features/foundation/05_completion.md`](docs/features/foundation/05_completion.md).
+Затем `quota-and-spend` и `index-job-core` (очередь `packages/queue`, фенс попыток, сторож, `GET /api/index-jobs/{id}`; квитанция [`docs/features/index-job-core/05_completion.md`](docs/features/index-job-core/05_completion.md)). Затем `crawler` (`apps/worker/src/crawl/`: CheckAddress после DNS и на каждом перенаправлении, соединение по проверенному IP, robots.txt, обход внутри задачи; квитанция [`docs/features/crawler/05_completion.md`](docs/features/crawler/05_completion.md)). Затем `pdf-source` (`POST /api/bots/{bot_id}/sources` с multipart PDF: предел плана до тела и атомарно, `%PDF-`, 10 МБ по заявленному и принятому; том `uploads/<index_job_id>`; разбор `pdfjs-dist` в дочернем процессе с таймаутом 30 с и пределом памяти; `no_text_layer`; файл удаляется после done И failed; квитанция [`docs/features/pdf-source/05_completion.md`](docs/features/pdf-source/05_completion.md)). Затем `chunk-embed` (`packages/rag/src/chunk.ts` — фрагменты 500/600/80 с `context_path`, линейно; `apps/worker/src/embed/embed-and-store.ts` — пачки ≤ 64 через `meteredCall`, квота/бюджет на КАЖДУЮ попытку, 1536; `packages/db/src/chunks.ts` — страница и фрагменты одной транзакцией с фенсом, поиск `searchChunks` точным перебором внутри бота, A-N6-028; квитанция [`docs/features/chunk-embed/05_completion.md`](docs/features/chunk-embed/05_completion.md)). Затем `rag-answer` — ЯДРО ответа без маршрута (`packages/rag/src/answer.ts`: квота → эмбеддинг вопроса → поиск внутри бота → порог 0.40 ДО модели → фрагменты данными в разделителях → Haiku по JSON-схеме с таймаутом → `ValidateModelAnswer` → плашка источника; `packages/db/src/answers.ts`; A-N6-029; порог НЕ откалиброван; квитанция [`docs/features/rag-answer/05_completion.md`](docs/features/rag-answer/05_completion.md)). Затем `design-shell` — каркас интерфейса из готового N5 (токены двух тем с палитрой «Суфлёра», тёмная по умолчанию и cookie `n6_theme`, Onest, лендинг с одним полем адреса, тарифы, вход, пустой кабинет; прибор `scripts/check-responsive.sh` с зависимостями в `scripts/responsive/` — `npm ci --prefix scripts/responsive`; квитанция [`docs/features/design-shell/05_completion.md`](docs/features/design-shell/05_completion.md)). Затем `preview-flow` — предпросмотр до регистрации (`POST /api/preview`: CheckAddress в `web` ДО квоты и постановки, `Idempotency-Key`, квоты `:create`/`ip_previews`/`previews` одной транзакцией, 202 + HttpOnly-cookie; `GET /api/preview/{index_job_id}` — «k из ≤ 20» / нет ответа / отказ / готово с макетом и подсказками; `…/ask` — ядро rag-answer с ботом и историей СЕРВЕРА, `:answers` 10; `…/claim` и claim при регистрации/входе; экраны `/preview`, `/preview/{index_job_id}`; миграция 002; `CheckAddress` теперь `@n6/rag/check-address`; A-N6-032; квитанция [`docs/features/preview-flow/05_completion.md`](docs/features/preview-flow/05_completion.md)). Затем `bot-cabinet` — кабинет бота (`GET|POST /api/bots` с пределом плана под `FOR UPDATE` аккаунта, общий с claim; `PATCH /api/bots/{id}` — контакт для «не знаю» закрытым набором форм, стереть нельзя; `POST …/origins` — домен → origin, ≤ 20; `POST …/sources` JSON — сайт с CheckAddress в `web`; `POST /api/sources/{id}/reindex` — «Повторить» отказавший сайт; `POST …/ask` — тестовый чат владельца, квота бота 3 scope; экраны `/dashboard`, `/dashboard/bots/{id}`, `…/install` — без контакта и без собранного виджета кода нет; владение — одно условие `OWNED` в `packages/db/src/bots.ts`; A-N6-033; квитанция [`docs/features/bot-cabinet/05_completion.md`](docs/features/bot-cabinet/05_completion.md)). Затем `widget-runtime-and-badge` — виджет (`apps/widget`: один `<script data-bot>`, `<n6-sufler>` с открытым Shadow DOM, стили только `adoptedStyleSheets`, пузырь 56/16, окно по клику, бейдж с восстановлением; бандл ≈ 5,5 КБ gzip при потолке 45 → `apps/web/widget-bundle/`, раздаёт `GET /w/[file]`, старый хэш получает текущий бандл); `GET /w/v1/config?bot=` (CheckOrigin по `allowed_origin`, 403 без ACAO, BadgeRequired строгим равенством, установка first_config), `POST /w/v1/event`, `OPTIONS`; A-N6-034; квитанция [`docs/features/widget-runtime-and-badge/05_completion.md`](docs/features/widget-runtime-and-badge/05_completion.md)). Затем `visitor-ask-and-limits` — ответ посетителю на чужом сайте (`POST /w/v1/ask?bot=`: CheckOrigin ДО тела, 403 без ACAO и `refused_origin`; тело — ровно `{ visitor_session, question }`, история — на СЕРВЕРЕ (`visitor_session.history`, ≤ 2 хода, 30 мин); токен сессии посетителя выдаёт `config` — `<uuid>.<HMAC по боту, origin и /24>`; на плане с бейджем нужен записанный показ; пять scope квоты ДО эмбеддинга; 429 с контактом; установка по `first_answer`; **ответ модели показывается только боту с отметкой владельца «Я проверил ответы бота»** — иначе «Бот ещё настраивается» без вызова модели (A-N6-035, пока A-N6-030 не закрыт); баннер исчерпания месяца; сторож стирает текст «не знаю» через 14 дней и историю через 30 мин; слоты проб `O_EXCL`; миграция 003; квитанция [`docs/features/visitor-ask-and-limits/05_completion.md`](docs/features/visitor-ask-and-limits/05_completion.md)). Стек целиком (`docker compose up`) ещё не поднимался — проверка на чужом origin по ВЫДАННОМУ адресу стенда не выполнена (`embed-contract.md`: not-deployed); калибровка порога 20 + 20 — не измерена.
+
+Что перенесено из отчёта валидации ([`docs/validation-report.md`](docs/validation-report.md), вердикт
+🟡 CAVEATS) и в каком состоянии:
+
+- **H1/M1/M2 закрыты правками 25.09** (§9 отчёта): квота предпросмотра разведена по `scope_key`
+  (A-N6-020), сеть OpenRouter — `CONFIRMED` по пробе A-N6-019, потолков — 10 scope и **14
+  переменных `QUOTA_*`**. Повторного независимого прохода валидатора по новой ревизии НЕ было.
+- **L1 перенесён:** первая фича, трогающая виджет (ADR-013) или уведомления (ADR-015), называет номер
+  ADR в квитанции — иначе трассировка решения обрывается на документах.
+- **Число правится по ВСЕМ цитатам, а не в документе-владельце.** H1 и M2 — ровно этот класс: одна
+  переменная держала два числа, «ровно 10» расходилось с 12 и 14. Меняя число, искать его сквозным
+  `grep` по всем файлам N6.
+- **Спецификация привязана к ревизии** `sha256:863aeda1…1156ec56` (830 строк; 28.09 FR-SOURCE-005 — текстовый файл по адресу, A-N6-080: вставка 9 строк перед FR-INDEX-001 и строка журнала §10, ссылки test-scenarios ≥ 86 сдвинуты на +9; прежняя ревизия `40e96d36…41ac9465` (819 строк); 28.09 FR-ANSWER-003 и SC-US-002-2 — светская беседа и «не знаю» по сайту, A-N6-074, строки на месте; прежняя ревизия `a8e1e94f…0447c35`; 27.09 v1.0 «по факту» — новые FR/NFR/US-017…020, правки на месте с пометкой «Факт v1.0», ссылки test-scenarios перепривязаны; прежняя ревизия `80ae5f58…fa655da` (609 строк); 27.09 FR-LIMIT-002: бюджет предпросмотра 40 000 → 120 000, решение владельца A-N6-053, строки на месте; прежняя ревизия `b1a8d416…d3fa23a`; 26.09 FR-LIMIT-002: исчерпание бюджета предпросмотра после прочитанной страницы — усечение, A-N6-052, строки на месте; прежняя ревизия `e5ea4c9a…ac04a`; 26.09 FR-TARIFF-002 переписан на месте под живую оплату, A-N6-040, число строк то же; прежняя ревизия `d8efed88…1755a`; 26.09 в строке FR-LOOK-012 отмечено
+  расхождение «данные в РФ» — A-N6-031 п.5, номера строк не сдвинуты). Правка требует
+  перепривязки ссылок `Specification.md:N` в `docs/test-scenarios.md` (скрипт сверки — в отчёте §9).
+- **Две зависимости `UNCONFIRMED`:** Telegram-оповещения оператору (мониторинг читается вручную раз
+  в сутки) и ЮKassa (код оплаты готов с 26.09, A-N6-040; живой магазин N6 не заведён — `N6_PAYMENTS_MODE=off`, экран интереса). Ключ OpenRouter СВОЙ у N6 ещё не проверен —
+  `EmbedProbe` при первом старте обязателен.
+- **Порог «не знаю» 0.40 — гипотеза** (A-N6-013); калибровка 20 + 20 вопросов ДО выпуска.
+- **152-ФЗ, трансграничная передача вопросов модели — открытый вопрос №1 владельца;** до решения —
+  только пилотные клиенты и строка-предупреждение в виджете.
+
+**Что осталось сделать, решения владельца и что переносится вручную при переезде — [`docs/BACKLOG.md`](docs/BACKLOG.md).**
+
+</details>
+
+## Документация — читать в этом порядке
+
+0. [`docs/REPRODUCE.md`](docs/REPRODUCE.md) — **повторить проект с нуля на новой машине**: зависимости, тестовый стек,
+   контейнер Playwright, конвейер фич с ревью, подъём стенда, ключи ЮKassa, проверки по выданному адресу.
+   [`docs/pipeline-walkthrough.md`](docs/pipeline-walkthrough.md) — **как устроен конвейер** (процесс, не код): модели и
+   шлюз, шаги от адреса до ответа, порядок операций, квота против расхода, чего в конвейере нет — снято со стенда 28.09.
+1. [`docs/canon.md`](docs/canon.md) — **источник имён и чисел**: 27 сущностей (19 + 4 оплаты A-N6-040 + 4 партнёрки A-N6-043), закрытые перечисления,
+   маршруты, 6 сервисов, 10 scope / 14 переменных потолков, планы. Код и документы ссылаются на него.
+2. [`docs/Specification.md`](docs/Specification.md) — ЧТО строить (v1.0 «по факту», 27.09): 45 FR + 7 FR-GROWTH,
+   14 FR-LOOK (11 принято / 3 отклонено), 12 NFR, 20 историй, 59 критериев `SC-US-nnn-k`; журнал изменений против v0.1 — §10.
+3. [`docs/Architecture.md`](docs/Architecture.md) — 6 сервисов, pgvector, инвентарь внешних
+   зависимостей (9 CONFIRMED / 2 UNCONFIRMED), сверка с псевдокодом.
+4. [`docs/ADR.md`](docs/ADR.md) — 18 решений; ADR-012…016 — строки переиспользования N5/N1/N4/N2.
+5. [`docs/Pseudocode.md`](docs/Pseudocode.md) — 34 алгоритма, контракты маршрутов, переходы состояний.
+6. [`docs/Refinement.md`](docs/Refinement.md) — edge cases, слои тестов, 16 стражей с внедряемым
+   дефектом, калибровка порога. [`docs/Completion.md`](docs/Completion.md) — выпуск и контракты на стенде.
+7. [`docs/reuse-inventory.md`](docs/reuse-inventory.md) — что взять готовым из N1–N5 и как отвечать
+   по каждой строке.
+
+Контракты: [`embed-contract`](docs/embed-contract.md), [`long-job-contract`](docs/long-job-contract.md),
+[`model-cost-contract`](docs/model-cost-contract.md), [`webhook-contract`](docs/webhook-contract.md).
+Решения без владельца и их откат — [`docs/decisions-autonomous.md`](docs/decisions-autonomous.md)
+(A-N6-001…035). BDD — [`docs/test-scenarios.md`](docs/test-scenarios.md).
+
+## Стек и сервисы compose (ровно 6, канон §6)
+
+| Сервис | Технология | Роль |
+|---|---|---|
+| `proxy` | Caddy 2.8 + `caddy-ratelimit` (сборка `proxy/Dockerfile`, донор N4) | единственная дверь: `127.0.0.1:${N6_HTTP_PORT:-8086}` к общему TLS-прокси; лимит 30 мутаций / 120 чтений в минуту на IP ДО тела; XFF → `{client_ip}`; кэш бандла виджета ставит `web` (A-N6-034); **CORS не ставит** |
+| `web` | Next.js 15, Node 22, `pg` без ORM, zod | кабинет, API, предпросмотр, `/w/v1/*`, `/b/{slug}`, `/r/{code}`, бандл виджета; ответы RAG (эмбеддинг вопроса → поиск → модель → проверка цитат) |
+| `worker-index` | Node 22, BullMQ | `CrawlSite`, `ExtractPdf`, `ChunkDocument`, `EmbedAndStore`; сторож раз в минуту |
+| `db` | `pgvector/pgvector:0.8.6-pg16` | все данные, `vector(1536)` + HNSW cosine; без публикации порта |
+| `redis` | `redis:7.4-alpine` | транспорт очереди, AOF, `noeviction`, пароль; без публикации порта |
+| `migrate` | образ `migrate` | миграции SQL до старта `web`/`worker-index` (`service_completed_successfully`) |
+
+Модели — через ОДИН шлюз **OpenRouter**: ответы `anthropic/claude-haiku-4.5` (`temperature 0`,
+`max_tokens 400`, structured outputs), эмбеддинги `openai/text-embedding-3-small`, **1536 измерений**.
+Монорепо: `apps/{web,worker,widget}`, `packages/{db,rag,queue}`.
+
+## Ключевые инварианты (нарушение — регресс, не стиль)
+
+- **Главный инвариант (@security, PD-CORE-001, ADR-003).** Модель ответа зовётся, только если найден
+  фрагмент со сходством ≥ `min_similarity` (0.40); каждый показанный ответ ссылается на переданный
+  модели фрагмент — `ValidateModelAnswer` отбрасывает цитату вне контекста. Иначе «не знаю» +
+  контакт. Выдумка от имени чужого бизнеса — дефект уровня блокера.
+- **Порядок операций — это и есть защита** (Specification §1): лимит частоты на двери ДО тела →
+  `CheckOrigin` ДО любого платного шага → атомарная квота ДО эмбеддинга вопроса → порог ДО модели →
+  robots.txt и `CheckAddress` ДО первой страницы → `index_job_id` в ответе `202` ДО работы.
+- **Квота — два оператора в одной транзакции** (ADR-008): `INSERT … ON CONFLICT DO NOTHING`, затем
+  `UPDATE … SET used = used + :n WHERE used + :n <= :limit RETURNING`; пустой результат И ЕСТЬ
+  отказ, откат ВСЕХ scope. Однооператорная `ON CONFLICT DO UPDATE … WHERE` недействительна (V2-R01
+  у N5). Счёт по ПОПЫТКАМ: отказ модели списанное не возвращает. Предел — окружение, не колонка.
+- **10 scope, 14 переменных `QUOTA_*`** (канон §7): scope с двумя пределами разводится по
+  `scope_key` (`preview_session` → `<сессия>:create|answers`, `global_previews` →
+  `previews|preview_answers`), у каждого предела своя переменная. Создание предпросмотра НЕ тратит
+  10 ответов (SC-US-002-3). Отсутствие ЛЮБОЙ из 14 валит старт `web` и `worker-index` — 14 отдельных
+  прогонов, по одному на ИМЯ.
+- **Изоляция ботов (NFR-SEC-001):** `WHERE bot_id = $1` в ТОМ ЖЕ SQL поиска, не пост-фильтр после
+  `LIMIT 4`.
+- **Бейдж fail-closed (ADR-004):** `badge_required = !(plan === 'nobadge' || plan === 'studio')`,
+  строгое равенство; `'NOBADGE'`, `' nobadge'`, `null` → бейдж. Решает только сервер.
+- **Виджет на чужой странице (ADR-005):** Shadow DOM, только `textContent`, ссылки — `http(s)` из
+  источников бота; CORS — точный origin из списка бота, **ровно один** `Access-Control-Allow-Origin`
+  (ставит только `web`), без cookie и без `*`; работает под CSP хозяина без `unsafe-inline`; бандл
+  ≤ 45 КБ gzip (сборка падает выше). Проверка — только на ЧУЖОМ origin (порт 8099).
+- **Краулер не сканер нашей сети (ADR-010):** проверка адреса ПОСЛЕ DNS и на КАЖДОМ перенаправлении,
+  соединение по проверенному IP; robots.txt до первой страницы; 1 с пауза, 1 поток; без браузера.
+- **Долгая задача — три состояния** (ADR-009): `index_job_id` до работы; Postgres — источник
+  истины, BullMQ — транспорт; fence попыток; «Повторить» продолжает по `content_hash`, а не заново;
+  молчание > 5 мин — `failed(stalled)`, не «выполняется».
+- **Закрытые перечисления, неизвестное — самое строгое:** план → `free`, статус бота → `deleted`,
+  задача → `failed`. `N6_PUBLIC_ORIGIN` и модели — без значений по умолчанию.
+- **Чужой ресурс — `404`**, как несуществующий. Демо-страница с нашего origin установкой не считается.
+- **152-ФЗ:** текст вопроса хранится только у `unknown`, 14 дней; IP — префикс; удаление аккаунта
+  ≤ 72 ч; ключ OpenRouter только на сервере.
+
+## Команды разработки
+
+Команды исполнимы с фичи `foundation`; `npm run build` собирает виджет первым (с `widget-runtime-and-badge`).
+
+```bash
+npm test                 # vitest: unit + стражи по исходнику
+npm run lint
+npm run build            # виджет (check-bundle-size ≤ 45 КБ gzip) → web → worker
+docker compose -f compose.test.yml --project-directory . --env-file <вне репо> run --rm --build test   # name: n6-test
+node scripts/test-ceilings-mutations.mjs   # страж отказа старта испытан мутациями → 0
+```
+
+`--build` обязателен (урок N5: без него прогон молча проверяет старый образ). Перед `docker compose up`:
+
+```bash
+node ../../.claude/hooks/check-ports.cjs .                          # Правило №0 → 0
+bash ../../scripts/check-port-conflicts.sh projects/06-rag-sales-chatbase   # → 0
+bash ../../scripts/complexity-router.sh                             # тир перед /go и /feature
+```
+
+## Правила репозитория, применимые здесь
+
+[`embeddable-widget`](../../.claude/rules/embeddable-widget.md) (три класса отказа на чужом origin) ·
+[`model-call-cost`](../../.claude/rules/model-call-cost.md) · [`long-running-job`](../../.claude/rules/long-running-job.md) ·
+[`docker-ports`](../../.claude/rules/docker-ports.md) · [`compose-hygiene`](../../.claude/rules/compose-hygiene.md) ·
+[`deployment-seams`](../../.claude/rules/deployment-seams.md) · [`security-operation-order`](../../.claude/rules/security-operation-order.md) ·
+[`fail-closed-defaults`](../../.claude/rules/fail-closed-defaults.md) · [`honest-configuration`](../../.claude/rules/honest-configuration.md) ·
+[`silent-fallbacks`](../../.claude/rules/silent-fallbacks.md) · [`shared-resource-verification`](../../.claude/rules/shared-resource-verification.md) ·
+[`guard-must-be-able-to-fail`](../../.claude/rules/guard-must-be-able-to-fail.md) · [`complexity-router`](../../.claude/rules/complexity-router.md).
+Входящих вебхуков в неделю нет (ADR-017) — [`incoming-webhooks`](../../.claude/rules/incoming-webhooks.md)
+включается вместе с оплатой.
+
+## Проектный toolkit (Phase 3, сгенерирован 2026-09-25)
+
+Полная карта с обоснованием каждого отсутствия — [`docs/toolkit-map.md`](docs/toolkit-map.md).
+
+| Агент | Когда звать |
+|---|---|
+| [`planner`](.claude/agents/planner.md) | разложить фичу на единицы, назвать FR/SC/ADR, строки переиспользования и порядок операций |
+| [`architect`](.claude/agents/architect.md) | схема, маршруты канона §5, границы сервисов, pgvector, новый ADR |
+| [`code-reviewer`](.claude/agents/code-reviewer.md) | после каждой единицы: барьер «не знаю», квота, origin, SSRF, fence, бейдж, изоляция |
+
+| Навык | Когда грузить |
+|---|---|
+| [`project-context`](.claude/skills/project-context/SKILL.md) | продукт, персоны, границы недели, числа канона, метрики, открытые вопросы |
+| [`coding-standards`](.claude/skills/coding-standards/SKILL.md) | пока пишется код: квота, RAG, краулер, задача индексации, виджет |
+| [`security-patterns`](.claude/skills/security-patterns/SKILL.md) | любая граница доверия: чужой origin, чужой контент, URL владельца, платный вызов |
+| [`responsive-ui`](.claude/skills/responsive-ui/SKILL.md) | любая вёрстка: лендинг, кабинет, `/b/{slug}`, окно виджета на 360 px |
+
+| Правило | О чём |
+|---|---|
+| [`security.md`](.claude/rules/security.md) | порядок операций, SSRF, CORS, XSS на чужих сайтах, prompt injection, 152-ФЗ |
+| [`coding-style.md`](.claude/rules/coding-style.md) | монорепо, TypeScript, `pg` и SQL, pgvector, закрытые перечисления, грабли |
+| [`testing.md`](.claude/rules/testing.md) | слои, конкурентные прогоны, 16 стражей, 14 прогонов старта, калибровка |
+| [`secrets-management.md`](.claude/rules/secrets-management.md) | какой секрет какому сервису, `${VAR:?}`, ротация, ключ только на сервере |
+
+## Feature lifecycle и roadmap
+
+`/feature` (4+ файлов или новая архитектура) или `/plan` (≤ 3 файлов), маршрутизация `/go`;
+PLAN → VALIDATE → IMPLEMENT → REVIEW (`../../.claude/rules/feature-lifecycle.md`), Phase 2 не
+пропускается. Перед `/go` и `/feature` — `bash ../../scripts/complexity-router.sh`: код `1` — L/XL и
+остановка на плане у владельца; код `2` — «проверка не выполнена», а не тир T.
+
+[`.claude/feature-roadmap.json`](.claude/feature-roadmap.json) — 17 фич в порядке зависимостей (16 mvp + 1 should),
+43 `SC-US` распределены без пересечений. У каждой фичи — поле `reuse` со строками ADR-012…016 и
+путём источника («взять из N5/N1/N4»); квитанция фичи отвечает по каждой строке `перенесено |
+адаптировано (что) | написано заново (почему)`. Молчание о строке — незакрытая строка.
+Квитанция — `docs/features/<slug>/05_completion.md`: что проверено и ЧЕМ, что НЕ доказано, какие
+стражи испытаны мутацией.
+
+## Режим исполнения (по факту на 27.09.2026)
+
+- **Код** пишут агенты Claude Opus 5.5 в отдельных git worktree (один писатель на дерево; общие файлы — журнал решений,
+  бэклог, roadmap, миграции — сводит координатор при слиянии; номера миграций и решений резервируются ДО параллельного запуска).
+- **Ревью** — другое семейство: Codex `gpt-6-astra`, усилие **medium** (указание владельца, не high); вызов `codex exec -s
+  read-only … </dev/null`, постановка в файле, модель и усилие подтверждаются журналом, пустой ответ — не «чисто»
+  ([`codex-invocation-local.md`](../../.claude/rules/codex-invocation-local.md)). Отчёт ревью — дословно в `08_review.md` фичи.
+- **Критерий остановки ревью задаётся ЗАРАНЕЕ** (урок фичи 17: восемь полных ревью подряд дали D по шкале «любая high — D»):
+  не больше двух кругов исправлений; дальше — узкое ревью только последней правки и решение владельца о принятом остатке.
+- **Тир XL (деньги, необратимое)** — план коммитится и останавливается; вопросы владельцу задаёт КООРДИНАТОР в своём разговоре,
+  реализацию делает новый агент, унаследовавший разговор с ответами (пересланная субагенту смена постановки блокируется
+  классификатором среды как внедрённая инструкция).
+- **UI и виджет** проверяются в контейнере Playwright (`bash scripts/check-responsive.sh --test tests/browser`), а по стенду —
+  прибором адаптивности с фикстурой (`--base https://sufler.aicoding.space --fixture .responsive-artifacts/ui-fixture.json`).
+- Решения без владельца — `docs/decisions-autonomous.md` (следующий — A-N6-081); необратимое и деньги — только с владельцем.
+  Агент не копирует чужие ключи и не правит общий прокси машины — это делает владелец командой, которую готовит агент.
+
+## Parallel execution strategy
+
+Каждый пишущий агент — изолированный worktree и непересекающийся набор файлов; интеграция только по
+именованным terminal-квитанциям (`../../.claude/rules/swarm-file-evidence.md`): `WORK_UNIT_ID`,
+абсолютный `TRACE_PATH`, последняя строка `Status: completed|failed`. Молчание — не прогресс. Общие
+манифесты (`package.json`, lockfile, `docker-compose.yml`, миграции) правит только integration owner.
+Запись в разделяемые ресурсы (`quota_counter`, `index_job`, `widget_install`, `attribution`) — только
+атомарными операторами БД.

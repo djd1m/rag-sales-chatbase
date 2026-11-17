@@ -1,0 +1,59 @@
+// Закрытые перечисления канона §4 — ЕДИНСТВЕННЫЙ источник в коде. CHECK миграции 001_init.sql
+// сверяет с ними tests/enums.test.ts. Неизвестное значение читается как самое строгое
+// (fail-closed-defaults): план → free, статус → deleted, задача → failed, причина → internal.
+// Образец формы — N5 packages/shared/src/enums.ts; значения — канон N6.
+export const ACCOUNT_PLAN = ['free', 'nobadge', 'studio'] as const;
+export const ACCOUNT_STATUS = ['active', 'erasing', 'deleted'] as const;
+export const BOT_STATUS = ['draft', 'active', 'deleted'] as const;
+// text (text-source, A-N6-080, миграция 015): текстовый файл по адресу (llms.txt, .md) — ДОПИСАН к набору 001.
+export const SOURCE_KIND = ['site', 'pdf', 'text'] as const;
+export const SOURCE_STATUS = ['pending', 'indexing', 'ready', 'failed'] as const;
+export const INDEX_JOB_STATUS = ['queued', 'running', 'done', 'failed'] as const;
+// job_attempt.status (A-N6-023; канон §4 набор не задаёт): попытка либо идёт, либо закрыта одним из двух исходов.
+// Отложенного «deferred» N5 здесь НЕТ: у N6 нет отложенных стадий — повтор есть новая попытка с новым fence.
+export const JOB_ATTEMPT_STATUS = ['running', 'done', 'failed'] as const;
+export const INDEX_JOB_FAILURE_REASON = ['robots_disallowed', 'unreachable', 'blocked_address', 'no_text', 'not_pdf',
+  'too_large', 'no_text_layer', 'quota_refused', 'embedding_unavailable', 'stalled', 'internal', 'not_text'] as const;
+// not_text (text-source, миграция 015): ответ по адресу текстового файла — не текст (HTML, двоичный, непригодная кодировка).
+// index_job.truncated_by (budget-truncation, A-N6-052, миграция 009): задача done, но остановлена исчерпанием
+// СОБСТВЕННОГО бюджета эмбеддингов — предпросмотра (embed_budget) или серии источника (series_embed_budget).
+// crawl-coverage (A-N6-070): page_budget — обход упёрся в предел страниц (тариф или предпросмотр); crawl_limit — в потолок
+// запросов или времени обхода. Обе — done с прочитанным, pages_total = известные адреса.
+export const INDEX_JOB_TRUNCATION = ['embed_budget', 'series_embed_budget', 'page_budget', 'crawl_limit'] as const;
+// not_verified (gate-onboarding, миграция 011, A-N6-066): вопрос посетителя отбит воротами «Я проверил ответы бота» —
+// пишет маршрут виджета, без текста, без квоты и без модели. Действующий CHECK — последнее question_log_outcome_check миграций.
+// small_talk (small-talk, A-N6-074, миграция 013): светская реплика — шаблон без модели, эмбеддинга и списания, без текста.
+export const QUESTION_OUTCOME = ['answered', 'unknown', 'refused_limit', 'refused_origin', 'not_verified', 'small_talk'] as const;
+export const QUOTA_SCOPE = ['visitor_answers', 'ip_answers', 'bot_day_answers', 'bot_month_answers', 'global_answers',
+  'preview_session', 'ip_previews', 'global_previews', 'account_embed_tokens', 'global_embed_tokens'] as const;
+export const GROWTH_EVENT_TYPE = ['badge_impression', 'badge_click', 'share_cta_shown', 'share_cta_click', 'widget_install',
+  'first_answer', 'public_page_view', 'invite_sent', 'invite_accepted', 'interest'] as const;
+export const ATTRIBUTION_SOURCE = ['code', 'invite', 'cookie'] as const;
+// partner_deleted (account-erasure, миграция 010): партнёр удалил аккаунт — клиент больше не приносит комиссию (A-N6-054, ответ 4).
+export const ATTRIBUTION_STATUS = ['pending', 'converted', 'rejected', 'partner_deleted'] as const;
+
+export type AccountPlan = typeof ACCOUNT_PLAN[number];
+export type AccountStatus = typeof ACCOUNT_STATUS[number];
+export type BotStatus = typeof BOT_STATUS[number];
+export type SourceKind = typeof SOURCE_KIND[number];
+export type IndexJobStatus = typeof INDEX_JOB_STATUS[number];
+export type JobAttemptStatus = typeof JOB_ATTEMPT_STATUS[number];
+export type IndexJobFailureReason = typeof INDEX_JOB_FAILURE_REASON[number];
+export type QuotaScope = typeof QUOTA_SCOPE[number];
+export type IndexJobTruncation = typeof INDEX_JOB_TRUNCATION[number];
+
+// Строгое сравнение без trim/toLowerCase (ADR-004): нормализация превращает опечатку в снятый бейдж.
+function read<T extends readonly string[]>(values: T, value: unknown, strictest: T[number]): T[number] {
+  return typeof value === 'string' && (values as readonly string[]).includes(value) ? value as T[number] : strictest;
+}
+export const readAccountPlan = (value: unknown): AccountPlan => read(ACCOUNT_PLAN, value, 'free');
+export const readAccountStatus = (value: unknown): AccountStatus => read(ACCOUNT_STATUS, value, 'deleted');
+export const readBotStatus = (value: unknown): BotStatus => read(BOT_STATUS, value, 'deleted');
+export const readIndexJobStatus = (value: unknown): IndexJobStatus => read(INDEX_JOB_STATUS, value, 'failed');
+export const readJobAttemptStatus = (value: unknown): JobAttemptStatus => read(JOB_ATTEMPT_STATUS, value, 'failed');
+export const readFailureReason = (value: unknown): IndexJobFailureReason => read(INDEX_JOB_FAILURE_REASON, value, 'internal');
+// Пометка усечения: NULL — задача не усекалась бюджетом. Непустое, но неизвестное значение — 'unknown' (прочитано
+// НЕ целиком, чем — неизвестно), а не null: «готово целиком» было бы самым разрешающим прочтением.
+export const readIndexJobTruncation = (value: unknown): IndexJobTruncation | 'unknown' | null =>
+  value === null || value === undefined ? null
+    : typeof value === 'string' && (INDEX_JOB_TRUNCATION as readonly string[]).includes(value) ? value as IndexJobTruncation : 'unknown';

@@ -1,0 +1,24 @@
+// из N5: projects/05-podcast-clips-opus/packages/db/src/index.ts — пул вынесен в pool.ts; attempts N5 → index-jobs.ts (фича index-job-core); quota — фича quota-and-spend
+export { Pool } from 'pg';
+export type { PoolClient } from 'pg';
+export { createPool } from './pool.js';
+export * from './quota.js';
+export * from './ceilings.js';
+export * from './index-jobs.js';
+export * from './pdf-sources.js';
+export * from './chunks.js';
+export * from './answers.js';
+export * from './previews.js';
+export * from './bots.js';
+export * from './sources.js';
+export * from './widget.js';
+export * from './visitor.js';
+export * from './public-page.js';
+export * from './summary.js';
+export * from './growth.js';
+export * from './payments.js';
+export * from './tariffs.js';
+export * from './partners.js';
+export * from './commission.js';
+export * from './studio.js';
+export * from './erasure.js';

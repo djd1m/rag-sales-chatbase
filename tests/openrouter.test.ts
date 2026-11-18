@@ -15,7 +15,7 @@ function gateway(reply: (body: Record<string, unknown>) => Response | Promise<Re
   return { seen, client: createOpenRouter(config, request) };
 }
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status });
-const vectors = (count: number, length: number) => ({ data: Array.from({ length: count }, () => ({ embedding: Array(length).fill(0.5) })), usage: { prompt_tokens: 7, total_tokens: 7 } });
+const vectors = (count: number, length: number) => ({ data: Array.from({ length: count }, (_, index) => ({ index, embedding: Array(length).fill(0.5) })), usage: { prompt_tokens: 7, total_tokens: 7 } });
 
 describe('Эмбеддинги: 1536 измерений, иначе отказ', () => {
   it('запрос несёт модель, dimensions 1536 и пачку; ответ — векторы и токены', async () => {

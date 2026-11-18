@@ -1,8 +1,8 @@
 # N6 «Суфлёр» — Docker Compose. Канон §6: ровно 6 сервисов (proxy, web, worker-index, db, redis,
 # migrate). Хранилища НЕ публикуют портов (docker-ports, Правило №0); web не публикуется мимо proxy
 # (deployment-seams: иначе X-Forwarded-For от клиента обходит лимит двери).
-# Хостовый порт — только ${VAR:-default} и только на петлю; секреты, модели и 14 потолков —
-# ${VAR:?…} без значений по умолчанию. Тестовый стек — отдельный compose.test.yml (name: n6-test).
+# Хостовый порт — только ${VAR:-default} и только на петлю; инфраструктурные секреты, модели и
+# 14 потолков — ${VAR:?…}. Ключи выбранных API проверяет preflight/VPS check; невыбранные могут быть пустыми. Тестовый стек — отдельный compose.test.yml (name: n6-test).
 # Фича foundation (2026-09-25): все четыре образа собраны `docker compose build`; стек целиком
 # (`up`) ещё НЕ поднимался — healthcheck'и и порядок старта не проверены запуском.
 name: ${N6_COMPOSE_PROJECT:-n6-sufler}
@@ -16,8 +16,10 @@ x-app-env: &app-env
 
 x-model-env: &model-env
   N6_PUBLIC_ORIGIN: ${N6_PUBLIC_ORIGIN:?публичный origin не задан — он определяет ссылку бейджа, демо-страницу, приглашения и границу «установка ≠ свой origin»}
-  OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:?ключ OpenRouter не задан — ни эмбеддинги, ни ответы невозможны}
-  ANSWER_MODEL: ${ANSWER_MODEL:?модель ответов не задана (канон §7 anthropic/claude-haiku-4.5)}
+  # Ключ обязателен только при выбранном провайдере: проверяется preflight и VPS check.
+  OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+  CLOUDRU_FM_API_KEY: ${CLOUDRU_FM_API_KEY:-}
+  EMBED_PROVIDER: ${EMBED_PROVIDER:?провайдер эмбеддингов не задан}
   EMBED_MODEL: ${EMBED_MODEL:?модель эмбеддингов не задана (канон §7 openai/text-embedding-3-small, 1536)}
   N6_SPEND_LOG: /work/spend/model-spend.jsonl
   N6_UPLOAD_DIR: /work/uploads
@@ -75,6 +77,9 @@ services:
     image: n6-sufler-web:${IMAGE_TAG:-dev}
     environment:
       <<: [*app-env, *model-env, *quota-env]
+      ANSWER_PROVIDER: ${ANSWER_PROVIDER:?провайдер ответов не задан}
+      ANSWER_MODEL: ${ANSWER_MODEL:?модель ответов не задана}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       SESSION_SECRET: ${SESSION_SECRET:?секрет сессий не задан — openssl rand -hex 32}
       # Оплата ЮKassa (tariffs-and-interest, A-N6-040): не задан режим → off (экран интереса, денег не принимаем) — самое
       # строгое, а не «примем». live без магазина, пустой или неизвестный режим — отказ старта в preflight web с именем

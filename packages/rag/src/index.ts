@@ -4,6 +4,7 @@ export * from './config.js';
 export * from './period.js';
 export * from './spend.js';
 export * from './openrouter.js';
+export * from './providers.js';
 export * from './chunk.js';
 export * from './search.js';
 export * from './prompt.js';

@@ -84,7 +84,7 @@ unless-stopped`, healthcheck, `depends_on: condition: service_healthy`; допо
 | Backend | Node 22, Next.js route handlers, `pg` без ORM, zod | как N5; SQL нужен явный для pgvector и атомарных квот |
 | Database | PostgreSQL 16 + pgvector 0.8.6; поиск — точный перебор `vector_cosine_ops` внутри бота (HNSW снят, A-N6-028/051) | вектора в НАШЕМ Postgres (постановка); ≤ 2000 измерений (ADR-001) |
 | Cache/Queue | Redis 7.4 + BullMQ | донор N5 `packages/queue` с фенсом попыток (ADR-009) |
-| AI | OpenRouter: `anthropic/claude-haiku-4.5` (ответы), `openai/text-embedding-3-small` (1536) | один шлюз, работающий из РФ-контура у N5 (ADR-002, ADR-011) |
+| AI | Прямой DeepSeek `deepseek-flash` (Responses, thinking off) + Cloud.ru FM `openai/text-embedding-3-small` (1536); OpenRouter Haiku/3-small сохранён | Независимый явный выбор, ADR-024; живые пробы нового профиля ещё не выполнены |
 | Parsing | undici (HTTP), собственный разбор robots.txt, `linkedom` + извлечение основного текста, `pdfjs-dist` | без браузера (ADR-010); PDF в процессе воркера |
 | Payments | ЮKassa: провайдер, сети в коде, фейк — перенос из N4 (`apps/web/src/server/payments/*`); вебхук — форма N1 | решение владельца «оплату через ЮKassa взять из предыдущих проектов» (A-N6-040, ADR-019) |
 | Infrastructure | Docker Compose, Caddy, VPS; стенд — за общим TLS-прокси машины `ai-hub-tls-proxy` | Architecture Constraints; ADR-023 |

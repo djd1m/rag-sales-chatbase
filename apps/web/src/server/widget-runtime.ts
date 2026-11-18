@@ -1,5 +1,5 @@
 // Связка виджета для маршрутов: собирается ОДИН раз на процесс (как getCabinetDependencies).
-import { createOpenRouter, spendRecorder } from '@n6/rag';
+import { createModelClient, spendRecorder } from '@n6/rag';
 import { allowMutation } from './rate-limit';
 import { getRuntime } from './runtime';
 import { createWidgetAskDependencies } from './widget-ask-deps';
@@ -12,7 +12,7 @@ export function getWidgetDependencies(): WidgetAskDependencies {
     const { pool, redis, config } = getRuntime();
     return createWidgetAskDependencies({
       pool, ceilings: config.ceilings, publicOrigin: config.publicOrigin, secret: config.sessionSecret,
-      client: createOpenRouter(config.models), models: config.models, spend: spendRecorder(config.spendLog),
+      client: createModelClient(config.models), models: config.models, spend: spendRecorder(config.spendLog),
       allowMutation: (ip) => allowMutation(redis, ip, config.sessionSecret),
     });
   })();

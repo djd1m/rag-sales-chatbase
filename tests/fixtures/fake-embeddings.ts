@@ -37,7 +37,7 @@ export function fakeGateway(reply: FakeGateway['reply'] = () => 'ok'): FakeGatew
     if (mode === '429') return json({ error: 'rate' }, 429);
     if (mode === '400') return json({ error: 'bad' }, 400);
     const length = mode === 'dim3072' ? 3072 : body.dimensions;
-    return json({ data: body.input.map((t) => ({ embedding: vectorFor(t, length) })), usage: { prompt_tokens: body.input.length * 7, total_tokens: body.input.length * 7 } });
+    return json({ data: body.input.map((t, index) => ({ index, embedding: vectorFor(t, length) })), usage: { prompt_tokens: body.input.length * 7, total_tokens: body.input.length * 7 } });
   }) as typeof fetch;
   return gateway;
 }

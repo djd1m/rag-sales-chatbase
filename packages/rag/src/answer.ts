@@ -31,7 +31,7 @@ export type QuestionOutcome = 'answered' | 'unknown' | 'refused_limit' | 'small_
 export interface QuestionLogEntry { botId: string; outcome: QuestionOutcome; text: string | null; citedChunkIds: string[] }
 export interface AnswerDeps {
   client: Pick<OpenRouter, 'complete' | 'embed'>;
-  models: { answerModel: string; embedModel: string };
+  models: { answerModel: string; embedModel: string; answerProvider?: 'openrouter' | 'deepseek'; embedProvider?: 'openrouter' | 'cloudru' };
   spend: SpendRecorder;
   // Списание квоты вопроса (виджет — 5 scope, предпросмотр — 2; строит вызывающий из ceilings.ts).
   chargeQuota: () => Promise<ChargeDecision>;
@@ -132,7 +132,7 @@ export async function answerQuestion(deps: AnswerDeps, bot: AnswerBot, mode: Ans
   try {
     embedded = await meteredCall({
       charge: deps.chargeQuota, spend: deps.spend, retries: 0,
-      event: { call: 'embed_question', model: deps.models.embedModel, request_id: requestId, bot_id: bot.id, unit: 'calls', quantity: 1 },
+      event: { call: 'embed_question', provider: deps.models.embedProvider, model: deps.models.embedModel, request_id: requestId, bot_id: bot.id, unit: 'calls', quantity: 1 },
       run: async () => {
         const { vectors, tokens } = await deps.client.embed({ texts: [question] });
         if (vectors.length !== 1 || !isEmbeddingOfDimension(vectors[0])) throw new GatewayResponseError('dimension_mismatch', 'Эмбеддинг вопроса не 1536');
@@ -159,7 +159,7 @@ export async function answerQuestion(deps: AnswerDeps, bot: AnswerBot, mode: Ans
   try {
     completion = await meteredCall({
       spend: deps.spend, retries: 0,
-      event: { call: mode === 'widget' ? 'answer' : mode === 'owner' ? 'answer_owner' : 'answer_preview', model: deps.models.answerModel, request_id: requestId, bot_id: bot.id, unit: 'calls', quantity: 1 },
+      event: { call: mode === 'widget' ? 'answer' : mode === 'owner' ? 'answer_owner' : 'answer_preview', provider: deps.models.answerProvider, model: deps.models.answerModel, request_id: requestId, bot_id: bot.id, unit: 'calls', quantity: 1 },
       run: () => deps.client.complete({ messages: prompt.messages, schemaName: 'answer', schema: prompt.schema,
         signal: AbortSignal.timeout(deps.answerTimeoutMs ?? ANSWER_TIMEOUT_MS) }),
     });

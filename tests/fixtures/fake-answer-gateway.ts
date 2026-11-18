@@ -31,7 +31,7 @@ export function fakeAnswerGateway(reply: FakeAnswerGateway['reply'] = () => ({ s
       const input = body.input as string[];
       g.embeds.push(input);
       if (g.embedStatus) return json({ error: 'x' }, g.embedStatus);
-      return json({ data: input.map((t) => ({ embedding: g.vector(t) })), usage: { prompt_tokens: 5, total_tokens: 5 } });
+      return json({ data: input.map((t, index) => ({ index, embedding: g.vector(t) })), usage: { prompt_tokens: 5, total_tokens: 5 } });
     }
     if (href !== 'https://openrouter.ai/api/v1/chat/completions') throw new TypeError(`подменный шлюз: чужой адрес ${href}`);
     const call: ChatCall = { messages: body.messages as ChatMessage[], body };

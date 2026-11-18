@@ -63,7 +63,7 @@ describe('Отказ старта: 14 прогонов web + 14 прогонов
       if (label === 'web') expect(result.status, result.output).toBe(0);
       else { expect(result.timedOut, result.output).toBe(true); expect(result.output).toContain('конфигурация принята'); }
     });
-    for (const name of ['ANSWER_MODEL', 'EMBED_MODEL', 'OPENROUTER_API_KEY', 'N6_PUBLIC_ORIGIN']) {
+    for (const name of (label === 'web' ? ['ANSWER_PROVIDER', 'ANSWER_MODEL', 'EMBED_PROVIDER', 'EMBED_MODEL', 'OPENROUTER_API_KEY', 'N6_PUBLIC_ORIGIN'] : ['EMBED_PROVIDER', 'EMBED_MODEL', 'OPENROUTER_API_KEY', 'N6_PUBLIC_ORIGIN'])) {
       it(`${label} без ${name}: код 1 и имя переменной`, () => {
         const env = environment(); delete env[name];
         const result = subprocess(entry, env);
@@ -102,7 +102,7 @@ describe('LoadCeilings: пустое, мусор, ноль — отказ; па�
 describe('Модели, origin, секреты', () => {
   it.each([['ANSWER_MODEL', 'anthropic/claude-sonnet-5'], ['ANSWER_MODEL', 'ANTHROPIC/CLAUDE-HAIKU-4.5'],
     ['EMBED_MODEL', 'openai/text-embedding-3-large'], ['EMBED_MODEL', ' openai/text-embedding-3-small']])('%s=%s вне закрытого набора — отказ', (name, value) => {
-    expect(() => loadWorkerConfig({ ...environment(), [name]: value })).toThrow(name);
+    expect(() => loadWebConfig({ ...environment(), [name]: value })).toThrow(name);
   });
   it.each(['https://sufler.ru/', 'https://sufler.ru/path', 'https://u:p@sufler.ru', 'ftp://sufler.ru', ' https://sufler.ru', 'https://sufler.ru?x=1'])(
     'N6_PUBLIC_ORIGIN «%s» не подчищается — отказ', (origin) => {

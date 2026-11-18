@@ -1,3 +1,9 @@
+> Обновление ADR-024 (2026-11-18): OPENROUTER_API_KEY обязателен только для выбранного OpenRouter.
+> DEEPSEEK_API_KEY — только web; CLOUDRU_FM_API_KEY — web/worker для выбранного Cloud.ru FM.
+> Worker читает только embedding-конфигурацию. Выбранные ключи валидируются preflight/VPS check;
+> Compose передаёт пустые неиспользуемые ключи. Никаких ключей в браузере, чате и журналах.
+> Остальное ниже — исходная политика; профиль и возврат описаны в deploy/vps/README.md.
+
 # Секреты и конфигурация N6 «Суфлёр»
 
 Источник: канон §6, Architecture «Security Architecture», Completion «Deployment Sequence» и

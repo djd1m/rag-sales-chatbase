@@ -7,7 +7,7 @@
 // Подключение Worker BullMQ — по образцу N5 apps/worker/src/index.ts (concurrency 1: вежливость краулера).
 import { writeFileSync } from 'node:fs';
 import { Worker } from 'bullmq';
-import { createOpenRouter, loadWorkerConfig, spendRecorder } from '@n6/rag';
+import { createEmbeddingClient, loadWorkerConfig, spendRecorder } from '@n6/rag';
 import { createPool } from '@n6/db';
 import { createIndexQueue, getRedisConnection, INDEX_QUEUE, type IndexMessage } from '@n6/queue';
 import { readEnvironment } from './environment';
@@ -39,8 +39,8 @@ async function main(): Promise<void> {
   const pool = createPool(config.databaseUrl);
   pool.on('error', () => console.error('Соединение БД потеряно: задачи индексации временно не арендуются'));
   const queue = createIndexQueue(config);
-  const embedder = createEmbedder({ pool, client: createOpenRouter(config.models), ceilings: config.ceilings,
-    spend: spendRecorder(config.spendLog), embedModel: config.models.embedModel });
+  const embedder = createEmbedder({ pool, client: createEmbeddingClient(config.models), ceilings: config.ceilings,
+    spend: spendRecorder(config.spendLog), embedModel: config.models.embedModel, embedProvider: config.models.embedProvider });
   const site = createSiteProcessor({ pool, userAgent: userAgentFor(config.publicOrigin), embedder });
   const pdf = createPdfProcessor({ pool, uploadDir: config.uploadDir, embedder });
   // Текстовый файл по адресу (text-source, A-N6-080): те же проверки адреса, что у краулера, и тот же User-Agent.

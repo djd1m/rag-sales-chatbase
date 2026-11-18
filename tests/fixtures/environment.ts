@@ -8,6 +8,7 @@ export function environment(): NodeJS.ProcessEnv {
     NODE_ENV: 'test', N6_PUBLIC_ORIGIN: 'https://sufler.test.invalid',
     DATABASE_URL: 'postgresql://test@localhost/n6_test', REDIS_URL: 'redis://:test-password@localhost:6379',
     SESSION_SECRET: randomBytes(32).toString('hex'), OPENROUTER_API_KEY: 'unused-test-key',
+    ANSWER_PROVIDER: 'openrouter', EMBED_PROVIDER: 'openrouter',
     ANSWER_MODEL: 'anthropic/claude-haiku-4.5', EMBED_MODEL: 'openai/text-embedding-3-small',
     // Каталог журнала — свой на каждый вызов фикстуры: пробы старта считают попытки за сутки по файлу.
     N6_SPEND_LOG: path.join(tmpdir(), `n6-spend-${randomBytes(6).toString('hex')}`, 'model-spend.jsonl'),

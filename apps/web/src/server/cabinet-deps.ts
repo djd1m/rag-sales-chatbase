@@ -14,7 +14,7 @@ export interface CabinetWiring {
   ceilings: Ceilings;
   publicOrigin: string;
   client: Pick<OpenRouter, 'complete' | 'embed'>;
-  models: { answerModel: string; embedModel: string };
+  models: { answerModel: string; embedModel: string; answerProvider?: 'openrouter' | 'deepseek'; embedProvider?: 'openrouter' | 'cloudru' };
   spend: SpendRecorder;
   allowMutation: (ip: string, account?: string) => Promise<boolean>;
   authenticate: (token: string) => Promise<{ account_id: string } | null>;

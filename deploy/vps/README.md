@@ -8,15 +8,38 @@
 ## Окружение
 
 Приватный `.env` уже подготовлен, права 0600; пароли PostgreSQL/Redis и секрет
-сессий сгенерированы. Самостоятельно заполнить `OPENROUTER_API_KEY`.
+сессий сгенерированы. Для нового профиля самостоятельно заполнить в `.env`:
+
+- `DEEPSEEK_API_KEY` — ключ из https://platform.deepseek.com/ .
+- `CLOUDRU_FM_API_KEY` — **Key Secret Foundation Models** Cloud.ru, не ключи S3.
+
+Основной профиль уже выбран: `ANSWER_PROVIDER=deepseek`, `ANSWER_MODEL=deepseek-flash`,
+`EMBED_PROVIDER=cloudru`, `EMBED_MODEL=openai/text-embedding-3-small`. Thinking выключен кодом.
+`OPENROUTER_API_KEY` для гибрида не требуется. Значения ключей в чат и git не отправлять.
 Ключи соседних проектов не копируются. `.env.vps.example` — публичный шаблон,
 содержащий только несекретные настройки и пустые поля ключей.
 
 Временный origin: `https://rag-sales.78.17.53.233.sslip.io`.
 Домен настроен в шаблоне, но это не означает, что сайт уже опубликован.
 При выборе своего домена поменять `N6_PUBLIC_ORIGIN` и `deploy/vps/site.Caddyfile`.
-Модели/14 квот сохранены. ЮKassa выключена. Заменять OpenRouter-ключ на DeepSeek-ключ
-в этой конфигурации нельзя: [исследование](../../docs/research/deepseek-2026-11-17.md).
+14 квот, размерность 1536, порог и top-4 сохранены. ЮKassa выключена.
+
+### Возврат к OpenRouter
+
+Заполнить `OPENROUTER_API_KEY` и изменить в `.env`:
+
+```dotenv
+ANSWER_PROVIDER=openrouter
+ANSWER_MODEL=anthropic/claude-haiku-4.5
+EMBED_PROVIDER=openrouter
+EMBED_MODEL=openai/text-embedding-3-small
+```
+
+Затем `bash scripts/vps.sh check` и `bash scripts/vps.sh up` (Compose пересоздаст изменённые сервисы).
+Можно переключать ответы и эмбеддинги независимо; одного изменения ключа без провайдера недостаточно.
+Автоматического fallback нет. При наличии старых индексов перед сменой embedding-шлюза проверить
+совместимость векторов либо переиндексировать все источники; одинаковое имя/размерность не доказательство.
+Cloud.ru 3-small — внешняя модель. Подробности: [ADR-024](../../docs/ADR.md).
 
 ## Изоляция и ресурсы
 
@@ -56,7 +79,7 @@ bash scripts/vps.sh logs --tail 60
 `check` не печатает разрешённый Compose с ключами: проверяет заполненность,
 изоляцию, порт, RAM, журналы, read-only конфигурацию двери и фактический IP Caddy.
 `up` использует уже собранные образы, не запускает фоновую сборку или pull.
-До заполнения ключа штатный отказ Compose не обходится фиктивным значением.
+До заполнения выбранных API-ключей VPS check/preflight откажут; это не обходится фиктивным значением.
 Платные startup probes приложения происходят только при настоящем запуске.
 
 Для последующей пересборки использовать отдельный ограниченный Buildx builder

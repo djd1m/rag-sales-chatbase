@@ -21,8 +21,8 @@ beforeAll(() => {
   // Пять сборок tsc — ≈ 20 с на загруженной машине (замер 27.09: 19 977 мс при load average 4,7): предел хука по
   // умолчанию 20 000 мс срабатывал раньше сборки, и файл падал таймаутом, а не проверкой.
 }, 120_000);
-function run(entry: string[], mode: string, timeout = 3000) {
-  const env = environment();
+function run(entry: string[], mode: string, timeout = 3000, overrides: NodeJS.ProcessEnv = {}) {
+  const env = { ...environment(), ...overrides };
   const log = path.join(mkdtempSync(path.join(tmpdir(), 'n6-gw-')), 'requests.jsonl');
   const result = subprocess(entry, { ...env, FAKE_GATEWAY: mode, FAKE_GATEWAY_LOG: log }, timeout);
   const requests = existsSync(log) ? readFileSync(log, 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l) as { path: string; body: Record<string, unknown> }) : [];
@@ -66,5 +66,33 @@ describe('Проба ANSWER_MODEL при старте web (preflight)', () => {
     const result = run(WEB, mode);
     expect(result.status, result.output).toBe(1);
     expect(result.output).toContain('web не запущен');
+  });
+});
+
+
+describe('Гибрид: реальные preflight/worker с подменой обоих API', () => {
+  const hybrid = { ANSWER_PROVIDER: 'deepseek', ANSWER_MODEL: 'deepseek-flash', EMBED_PROVIDER: 'cloudru',
+    DEEPSEEK_API_KEY: 'fixture-deepseek', CLOUDRU_FM_API_KEY: 'fixture-cloudru', OPENROUTER_API_KEY: '' };
+  it('web использует Responses с thinking off и JSON Schema, без ключа OpenRouter', () => {
+    const result = run(WEB, 'ok', 3000, hybrid);
+    expect(result.status, result.output).toBe(0);
+    expect(result.requests).toHaveLength(1);
+    expect(result.requests[0]).toMatchObject({ path: '/responses', body: { model: 'deepseek-flash',
+      reasoning: { effort: 'none' }, max_output_tokens: 16, text: { format: { type: 'json_schema' } } } });
+    expect(result.spend.map(l => [l.provider, l.phase, l.result])).toEqual([
+      ['deepseek', 'attempt', 'started'], ['deepseek', 'outcome', 'success']]);
+  });
+  it('worker стартует с одним Cloud.ru ключом, без ключа/модели ответов', () => {
+    const result = run(WORKER, 'ok', 3000, { ...hybrid, DEEPSEEK_API_KEY: undefined, ANSWER_MODEL: undefined, ANSWER_PROVIDER: undefined });
+    expect(result.timedOut, result.output).toBe(true);
+    expect(result.requests).toHaveLength(1);
+    expect(result.requests[0]).toMatchObject({ path: '/embeddings', body: { dimensions: 1536 } });
+    expect(result.spend.map(l => l.provider)).toEqual(['cloudru', 'cloudru']);
+  });
+  it.each(['500', 'noschema'])('ошибка DeepSeek %s валит web и не включает резерв', mode => {
+    const result = run(WEB, mode, 3000, hybrid);
+    expect(result.status, result.output).toBe(1);
+    expect(result.requests).toHaveLength(1);
+    expect(result.requests[0]!.path).toBe('/responses');
   });
 });

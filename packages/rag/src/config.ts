@@ -3,6 +3,7 @@
 // модели из закрытого набора и попарная проверка «персональный ≤ общего»; S3, водяной знак и
 // N5_TRUSTED_PROXY_HOPS убраны (у N6 их нет: дверь заменяет XFF одним адресом клиента).
 import { ANSWER_MODELS, EMBED_MODELS } from './constants.js';
+import { ANSWER_PROVIDERS, EMBED_PROVIDERS, assertAnswerConfig, type ModelConfig, type EmbeddingConfig } from './providers.js';
 import { isAbsolute, normalize } from 'node:path';
 import { validateSpendPath } from './spend.js';
 
@@ -126,19 +127,34 @@ export function loadPublicOrigin(env: Environment): string {
   }
   return parsed.origin;
 }
-function oneOf(env: Environment, name: string, allowed: readonly string[], consequence: string): string {
+function oneOf<T extends string>(env: Environment, name: string, allowed: readonly T[], consequence: string): T {
   const value = required(env, name, consequence);
-  if (!allowed.includes(value)) throw new Error(`${name} непригодна («${value.slice(0, 60)}»): допустимо только ${allowed.join(', ')}`);
-  return value;
+  if (!(allowed as readonly string[]).includes(value)) throw new Error(`${name} непригодна («${value.slice(0, 60)}»): допустимо только ${allowed.join(', ')}`);
+  return value as T;
 }
-export function loadModelConfig(env: Environment) {
-  const apiKey = required(env, 'OPENROUTER_API_KEY', 'ни эмбеддинги, ни ответы невозможны');
-  if (/\s/.test(apiKey)) throw new Error('OPENROUTER_API_KEY непригодна: ключ содержит пробельные символы');
+function providerKey(env: Environment, name: string): string {
+  const key = required(env, name, 'ключ выбранного провайдера не задан');
+  if (/\s/.test(key)) throw new Error(`${name} непригодна: ключ содержит пробельные символы`);
+  return key;
+}
+export function loadEmbeddingConfig(env: Environment): EmbeddingConfig {
+  const embedProvider = oneOf(env, 'EMBED_PROVIDER', EMBED_PROVIDERS, 'провайдер эмбеддингов не определён');
   return Object.freeze({
-    apiKey,
-    answerModel: oneOf(env, 'ANSWER_MODEL', ANSWER_MODELS, 'модель ответов не определена (канон §7)'),
-    embedModel: oneOf(env, 'EMBED_MODEL', EMBED_MODELS, 'модель эмбеддингов не определена (канон §7, 1536 измерений)'),
+    embedProvider,
+    embedApiKey: providerKey(env, embedProvider === 'cloudru' ? 'CLOUDRU_FM_API_KEY' : 'OPENROUTER_API_KEY'),
+    embedModel: oneOf(env, 'EMBED_MODEL', EMBED_MODELS, 'модель эмбеддингов не определена (1536 измерений)'),
   });
+}
+export function loadModelConfig(env: Environment): ModelConfig {
+  const embedding = loadEmbeddingConfig(env);
+  const answerProvider = oneOf(env, 'ANSWER_PROVIDER', ANSWER_PROVIDERS, 'провайдер ответов не определён');
+  const config = {
+    ...embedding, answerProvider,
+    answerApiKey: providerKey(env, answerProvider === 'deepseek' ? 'DEEPSEEK_API_KEY' : 'OPENROUTER_API_KEY'),
+    answerModel: oneOf(env, 'ANSWER_MODEL', ANSWER_MODELS, 'модель ответов не определена'),
+  };
+  assertAnswerConfig(config);
+  return Object.freeze(config);
 }
 // Журнал попыток (NFR-OPS-001): без него платный вызов не выполняется — значит и процесс не стартует.
 export function loadSpendLog(env: Environment): string {
@@ -170,7 +186,7 @@ export type WebConfig = ReturnType<typeof loadWebConfig>;
 // Разделение соответствует compose: worker-index не получает SESSION_SECRET.
 export function loadWorkerConfig(env: Environment) {
   const ceilings = loadCeilings(env);
-  const models = loadModelConfig(env);
+  const models = loadEmbeddingConfig(env);
   const publicOrigin = loadPublicOrigin(env);
   const spendLog = loadSpendLog(env);
   const uploadDir = loadUploadDir(env);

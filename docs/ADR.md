@@ -35,6 +35,8 @@ HNSW + фильтр `bot_id` + `iterative_scan` вернул 0 из 3 своих
 
 ## ADR-002 · Эмбеддинги через шлюз OpenRouter; запасной маршрут назван, не выбран
 
+**Обновление 2026-11-18:** выбор шлюза заменён ADR-024; прежнее решение ниже сохранено как история.
+
 **Контекст.** API OpenAI не обслуживает Россию (бриф, риск №1); постановка требует
 `text-embedding-3-small`. OpenRouter отдаёт эмбеддинги (`POST /api/v1/embeddings`) и держит эту
 модель в каталоге; N5 на этой машине уже ходит в OpenRouter за ответами модели (A-N6-009).
@@ -169,6 +171,8 @@ HTML того же хоста; проверка адреса после DNS и �
 `10.0.0.5`, DNS на частный адрес, редирект на частный адрес…) → все `blocked_address`.
 
 ## ADR-011 · Модель ответа — `anthropic/claude-haiku-4.5` через OpenRouter, structured outputs
+
+**Обновление 2026-11-18:** модель/шлюз выбираются по ADR-024; прежнее решение ниже сохранено как история.
 
 **Контекст.** A-N6-010: Anthropic через тот же шлюз, что у N5. Цена по каталогу — $1/$5 за 1 млн
 токенов; `structured_outputs` поддержан.
@@ -368,3 +372,32 @@ route handler Next по форме N1; разовая оплата на 30 дн�
 | 021 | удаление аккаунта | FR-AUTH-002, NFR-SEC-003 |
 | 022 | жизненный цикл источника, усечение | FR-INDEX-004, FR-LIMIT-002/003 |
 | 023 | дверь и стенд | NFR-OPS, deployment-seams |
+
+
+## ADR-024 · Независимые провайдеры: прямой DeepSeek + Cloud.ru FM, OpenRouter сохранён
+
+**Контекст.** 18.11.2026 владелец выбрал прямой китайский DeepSeek для ответов и Cloud.ru FM для
+эмбеддингов, с возможностью вернуться к OpenRouter. Исследование —
+`docs/research/deepseek-cloudru-price-quality-2026-11-18.md`.
+
+**Решение.** Закрытые наборы ANSWER_PROVIDER=deepseek|openrouter, EMBED_PROVIDER=cloudru|openrouter,
+отдельные ключи DEEPSEEK_API_KEY/CLOUDRU_FM_API_KEY/OPENROUTER_API_KEY, адреса API в коде.
+DeepSeek допускает deepseek-flash, Responses JSON Schema, thinking off; OpenRouter — прежний Haiku
+и structured outputs. Только text-embedding-3-small (1536) для обоих embedding-шлюзов. Отказ одного
+API не вызывает обращения к другому. Возврат — явная смена провайдеров/модели и рестарт сервисов.
+Worker загружает только embedding-конфигурацию и не получает ключ DeepSeek. Выбранные ключи
+обязательны в preflight/VPS check; Compose пропускает пустые неиспользуемые ключи.
+
+**Сохранено.** Квота/attempt-fsync до вызова, пределы проб, максимум 400 output tokens, таймауты
+20/30 с, top-4/0.40, серверная проверка цитат, отказ «не знаю», изоляция и размерность БД.
+В журнале попыток добавлен provider; это не валютная бухгалтерия. Векторы сортируются по index,
+дубликаты/пропуски/другая размерность отвергаются. Миграция схемы не нужна.
+
+**Последствия.** Резерв требует отдельного ключа OpenRouter. 3-small в Cloud.ru — внешняя модель;
+это не гарантия обработки в РФ. Переход шлюза с существующими данными требует проверки совместимости
+векторов либо полной переиндексации; никакой гарантии равного качества Haiku/Flash до A/B.
+Реальные API и качество будут проверены после ввода владельцем ключей; тесты используют подмену сети.
+
+**Confirmation.** model-providers/config/probes/openrouter tests: четыре сочетания провайдеров,
+маршрутизация ключей, schema/refusal/incomplete/timeouts, индексы/dimensions; rag-answer tests:
+сохранение unknown/citations. Подробная квитанция — `docs/features/hybrid-model-providers/05_completion.md`.

@@ -11,6 +11,7 @@ export const SPEND_CALLS = ['answer', 'embed_question', 'embed_index', 'answer_p
 export type SpendCall = typeof SPEND_CALLS[number];
 export type SpendResult = 'started' | 'success' | 'timeout' | 'rate_limited' | 'provider_error' | 'schema_violation' | 'dimension_mismatch';
 export interface SpendEvent {
+  provider?: 'openrouter' | 'deepseek' | 'cloudru';
   call: SpendCall; model: string; request_id: string; attempt_no: number;
   bot_id?: string; account_id?: string; index_job_id?: string;
   unit: 'calls' | 'tokens'; quantity: number; phase: 'attempt' | 'outcome'; result: SpendResult;

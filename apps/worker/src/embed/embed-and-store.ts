@@ -15,7 +15,7 @@ import {
 import { StepFailure } from '../run-index-job';
 
 export interface EmbedderOptions {
-  pool: Pool; client: Pick<OpenRouter, 'embed'>; ceilings: Ceilings; spend: SpendRecorder; embedModel: string;
+  pool: Pool; client: Pick<OpenRouter, 'embed'>; ceilings: Ceilings; spend: SpendRecorder; embedModel: string; embedProvider?: 'openrouter' | 'cloudru';
   retryPauseMs?: number; log?: (line: string) => void;
 }
 export interface Embedder { embed(lease: Lease, chunks: readonly Chunk[]): Promise<number[][]> }
@@ -76,7 +76,7 @@ export function createEmbedder(options: EmbedderOptions): Embedder {
       result = await meteredCall({
         charge: () => charge(lease, payer, tokens),
         spend: options.spend,
-        event: { call: payer.kind === 'preview' ? 'embed_preview' : 'embed_index', model: options.embedModel, request_id: randomUUID(),
+        event: { call: payer.kind === 'preview' ? 'embed_preview' : 'embed_index', provider: options.embedProvider, model: options.embedModel, request_id: randomUUID(),
           bot_id: lease.botId, index_job_id: lease.indexJobId, ...(payer.kind === 'account' ? { account_id: payer.accountId } : {}),
           unit: 'tokens', quantity: tokens },
         retries: EMBED_RETRIES, pauseMs: options.retryPauseMs ?? 1000,

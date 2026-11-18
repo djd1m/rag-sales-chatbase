@@ -1,3 +1,7 @@
+> Для standalone VPS 78.17.53.233 применять `deploy/vps/README.md` и ADR-024.
+> Примеры исходного стенда ниже исторические: новый профиль использует DEEPSEEK_API_KEY +
+> CLOUDRU_FM_API_KEY и явные ANSWER_PROVIDER/EMBED_PROVIDER; OPENROUTER_API_KEY нужен при выборе OpenRouter.
+
 # Как повторить «Суфлёр» (N6) с нуля
 
 Дата: 2026-09-27 · Основа: основная ветка после фич 1–17 · Образец — `projects/05-podcast-clips-opus/docs/REPRODUCE.md`.

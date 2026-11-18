@@ -159,8 +159,12 @@ TLS-прокси `ai-hub-tls-proxy` (`/home/dz-projects-2026/edge`, Caddy 2.10, 
 (`/home/dz-projects-2026/.n6-stand/stand.env`, 600). Основной `docker-compose.yml` от стенда не зависит.
 
 Переменные БЕЗ значения по умолчанию (`${VAR:?}`, отказ старта): `N6_PUBLIC_ORIGIN`, `N6_DB_PASSWORD` (из него compose
-собирает `DATABASE_URL`), `REDIS_PASSWORD` (→ `REDIS_URL`), `OPENROUTER_API_KEY`, `SESSION_SECRET`, `ANSWER_MODEL`,
-`EMBED_MODEL`, все четырнадцать переменных потолков §7 (`QUOTA_*`; scope — 10, переменных — 14).
+собирает `DATABASE_URL`), `REDIS_PASSWORD` (→ `REDIS_URL`), `SESSION_SECRET`, `ANSWER_PROVIDER`, `ANSWER_MODEL`,
+`EMBED_PROVIDER`, `EMBED_MODEL`, все четырнадцать переменных потолков §7.
+Ключи проверяются условно в preflight и `scripts/vps.sh check`: `DEEPSEEK_API_KEY` нужен для ответов DeepSeek,
+`CLOUDRU_FM_API_KEY` — для эмбеддингов Cloud.ru FM, `OPENROUTER_API_KEY` — когда хотя бы один путь использует
+OpenRouter. Невыбранный ключ может быть пустым. Worker получает только embedding-настройки и ключи;
+DeepSeek-ключ ему не передаётся. Провайдеры и модели выбираются явно, без автоматического fallback (ADR-024).
 Оплата (только `web`): `N6_PAYMENTS_MODE` ∈ `off | fake | live` — не задана → `off` (экран интереса), явно пустая или
 неизвестная → отказ старта, `fake` при `NODE_ENV=production` → отказ; `YOOKASSA_SHOP_ID` (десятичный),
 `YOOKASSA_SECRET_KEY`, `YOOKASSA_TEST_MODE` (строго `true|false`) — обязательны только при `live`
@@ -170,10 +174,16 @@ TLS-прокси `ai-hub-tls-proxy` (`/home/dz-projects-2026/edge`, Caddy 2.10, 
 
 ## 7. Числа (единый источник)
 
-**Модели:** ответы — `anthropic/claude-haiku-4.5` через OpenRouter (A-N6-010), `temperature 0`,
-`max_tokens 400`, structured outputs; эмбеддинги — `openai/text-embedding-3-small` через OpenRouter,
-**1536 измерений** (A-N6-009). Цены на 2026-09-25 (каталог OpenRouter): Haiku 4.5 — $1 / $5 за
-1 млн входных / выходных токенов; 3-small — $0,02 за 1 млн токенов.
+**Модели (ADR-024, 2026-11-18):** основной профиль — `ANSWER_PROVIDER=deepseek`, `ANSWER_MODEL=deepseek-flash`
+через прямой `https://api.deepseek.com/responses`, `reasoning.effort=none`, `temperature=0`,
+`max_output_tokens=400`, JSON Schema в `text.format`; `EMBED_PROVIDER=cloudru`,
+`EMBED_MODEL=openai/text-embedding-3-small` через Cloud.ru FM `/v1/embeddings`, **1536 измерений**.
+Резервный явный профиль — `ANSWER_PROVIDER=openrouter`, `ANSWER_MODEL=anthropic/claude-haiku-4.5`,
+`EMBED_PROVIDER=openrouter`, тот же `EMBED_MODEL`. Можно переключать пути независимо.
+OpenRouter сохраняет Chat Completions, `response_format.json_schema.strict=true`, `require_parameters=true`.
+Ограничение 400, таймауты 20/30 с, порог 0.40 и top-4 сохранены. Тарифы и ограничения качества —
+[исследование](research/deepseek-cloudru-price-quality-2026-11-18.md). Ключи/живые пробы ещё не проверены;
+одинаковое имя embedding-модели не доказывает численную идентичность векторов разных шлюзов.
 
 **Поиск и ответ:** фрагмент — цель 500 токенов, потолок 600, перекрытие 80; к тексту фрагмента
 приписан контекст «заголовок страницы › цепочка заголовков»; `top_k = 4`; порог косинусного

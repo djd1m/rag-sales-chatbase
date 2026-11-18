@@ -69,7 +69,7 @@
 
 	# X-Forwarded-For ЗАМЕНЯЕТСЯ адресом клиента, а не дописывается (урок N4: Caddy дописывал свой
 	# адрес, приложение читало последний элемент, и все посетители сливались в один префикс)
-	reverse_proxy web:3000 {
+	reverse_proxy rag-sales-web:3000 {
 		header_up X-Forwarded-For {client_ip}
 		transport http {
 			read_timeout 60s

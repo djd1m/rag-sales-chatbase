@@ -38,6 +38,13 @@ def check_models(services):
         raise ValueError('Ключ ответов DeepSeek не должен передаваться worker-index')
 
 
+def check_web_route(services, config_text):
+    if services['web'].get('networks', {}).get('default', {}).get('aliases') != ['rag-sales-web']:
+        raise ValueError('web должен иметь уникальный внутренний alias rag-sales-web')
+    if 'reverse_proxy rag-sales-web:3000 {' not in config_text or 'reverse_proxy web:3000 {' in config_text:
+        raise ValueError('Внутренний proxy должен использовать rag-sales-web, иначе возможна коллизия с Proofwall')
+
+
 def check(env_file):
     result = subprocess.run(
         ['docker', 'compose', '--env-file', env_file, '-f', 'docker-compose.yml',
@@ -60,6 +67,7 @@ def check(env_file):
     expected_config = str((Path(__file__).resolve().parents[1] / 'deploy/vps/proxy.Caddyfile').resolve())
     if not mounted or mounted.get('source') != expected_config or mounted.get('read_only') is not True:
         raise ValueError('Дверь не использует отдельный read-only Caddyfile этого VPS')
+    check_web_route(services, Path(expected_config).read_text())
     ports = services['proxy'].get('ports', [])
     if len(ports) != 1 or ports[0].get('host_ip') != '127.0.0.1':
         raise ValueError('Дверь должна публиковаться только на 127.0.0.1')

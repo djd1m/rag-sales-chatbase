@@ -72,5 +72,20 @@ class ModelConfiguration(unittest.TestCase):
             module.check_models(cfg)
 
 
+class WebRouting(unittest.TestCase):
+    def test_unique_alias_and_upstream(self):
+        cfg = {'web': {'networks': {'default': {'aliases': ['rag-sales-web']}}}}
+        module.check_web_route(cfg, 'reverse_proxy rag-sales-web:3000 {')
+
+    def test_missing_alias_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, 'alias'):
+            module.check_web_route({'web': {'networks': {'default': {}}}}, 'reverse_proxy rag-sales-web:3000 {')
+
+    def test_shared_generic_web_is_rejected(self):
+        cfg = {'web': {'networks': {'default': {'aliases': ['rag-sales-web']}}}}
+        with self.assertRaisesRegex(ValueError, 'коллизия'):
+            module.check_web_route(cfg, 'reverse_proxy web:3000 {')
+
+
 if __name__ == '__main__':
     unittest.main()

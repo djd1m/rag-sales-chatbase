@@ -1,5 +1,5 @@
-# Добавлять в общий Caddy только после успешного запуска web и proxy.
-rag-sales.78.17.53.233.sslip.io {
+# Суфлёр: основной домен, TLS через общий Caddy на 443.
+sufler.site {
     tls {
         issuer acme {
             disable_http_challenge
@@ -7,7 +7,16 @@ rag-sales.78.17.53.233.sslip.io {
     }
     encode gzip zstd
     reverse_proxy rag-sales-proxy:80 {
-        # Удаляем присланный извне XFF, передаём фактический адрес соединения.
         header_up X-Forwarded-For {remote_host}
     }
+}
+
+# Старые ссылки переводим на основной домен с сохранением пути и query string.
+rag-sales.78.17.53.233.sslip.io {
+    tls {
+        issuer acme {
+            disable_http_challenge
+        }
+    }
+    redir https://sufler.site{uri} 308
 }

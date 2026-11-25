@@ -1,0 +1,16 @@
+{
+  "landing-light.png": "68af932873609d389ec0b7d7fcb64b4362b7a261f0b4164cd9c9159beb86ad06",
+  "landing-dark.png": "6ee09bc0c97e714477108ba014f72a429ec4258d95eedae5d188c2ed36998f8c",
+  "pricing-light.png": "296556b24db8e6be83c7583bc0e5b4213ec148607218994a4cd847c1bb658737",
+  "pricing-dark.png": "28338380bf63a8118a838cb212d5130c3a962de9598f1da20a9eb69d12a087ca",
+  "preview-light.png": "6de589f1f0a27c4de0649ba4b3d363dcb664bd1b2a54ff36f08616d99147ab7f",
+  "preview-dark.png": "21839d9559a6561a66e298abc7441eecb87b6f25c1a7fc68539c03cca3b5d14d",
+  "login-light.png": "856f77d4caa241f86ae60168ab1cb99cc68c2b568dbc65c4ac644bbbd96969d6",
+  "login-dark.png": "e7240ba939e830296a5178eb59351dcbfe5703196e6027d06bbace7f534cef5e",
+  "support-light.png": "1e646991a64f3a0c27ba99dcf37a05707bdebed554f558ef0e124cf6106b9e17",
+  "support-dark.png": "aa7ad2463ee354d56cc99f4a5b293aa5992dc0355fc067f29a37c97dad943f37",
+  "install.png": "a4e89b4ecc84e18128aca40191ff895445aa2793b8539d6cc067415ac3a70a0c",
+  "widget.png": "cd72f0204575fe8fa71016d556bda3ae8e3c622f34a1c34a5b081d742dbf354b",
+  "visual-observations.json": "5cc89bac8ef4496dfd58c58f8807cfd2baea5374cffaf02c149174e0868d2728",
+  "observation.json": "8ac021891742380ce4b8fa5c277311173a1565551f63b04d7385773c86343510"
+}

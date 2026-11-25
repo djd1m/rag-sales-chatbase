@@ -1,0 +1,97 @@
+{
+  "at": "2026-11-25T18:04:29.297Z",
+  "engine": "Chromium",
+  "version": "156.0.8078.4",
+  "origin": "https://sufler.test",
+  "sourceIdentitySha256": "ed43e7c0101296d0d1e85b3504a7fb147f7c59ed0687066814f9008c3bb90415",
+  "buildId": "R8u2VkzHPZwAUwGc2g6Yn",
+  "imageId": "sha256:5ff81f7cf8db5a95b17e331151bf4bad91a3d318f93143af8a5ac31f03bba17e",
+  "expectedRuntime": {
+    "QUOTA_BOT_DAY_FREE": 50,
+    "QUOTA_BOT_DAY_PAID": 300,
+    "QUOTA_BOT_MONTH_FREE": 300,
+    "QUOTA_BOT_MONTH_PAID": 3000
+  },
+  "observations": [
+    {
+      "route": "/",
+      "theme": "light",
+      "http": 200,
+      "violations": []
+    },
+    {
+      "route": "/pricing",
+      "theme": "light",
+      "http": 200,
+      "violations": [],
+      "day": [
+        50,
+        300,
+        300
+      ],
+      "month": [
+        300,
+        3000,
+        3000
+      ]
+    },
+    {
+      "route": "/preview?source=pdf",
+      "theme": "light",
+      "http": 200,
+      "violations": []
+    },
+    {
+      "route": "/login",
+      "theme": "light",
+      "http": 200,
+      "violations": []
+    },
+    {
+      "route": "/support",
+      "theme": "light",
+      "http": 200,
+      "violations": []
+    },
+    {
+      "route": "/",
+      "theme": "dark",
+      "http": 200,
+      "violations": []
+    },
+    {
+      "route": "/pricing",
+      "theme": "dark",
+      "http": 200,
+      "violations": [],
+      "day": [
+        50,
+        300,
+        300
+      ],
+      "month": [
+        300,
+        3000,
+        3000
+      ]
+    },
+    {
+      "route": "/preview?source=pdf",
+      "theme": "dark",
+      "http": 200,
+      "violations": []
+    },
+    {
+      "route": "/login",
+      "theme": "dark",
+      "http": 200,
+      "violations": []
+    },
+    {
+      "route": "/support",
+      "theme": "dark",
+      "http": 200,
+      "violations": []
+    }
+  ]
+}

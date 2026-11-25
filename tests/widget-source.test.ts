@@ -84,6 +84,15 @@ describe('разбор ответов сервера (fail-closed)', () => {
     }
     expect(parseConfig(null)).toBeNull();
   });
+  it('visitor notice accepts old DTOs but refuses executable and malformed disclosure links', () => {
+    const notice = { text: 'Вопрос обрабатывается автоматически.', href: 'https://sufler.example/legal/privacy' };
+    expect(parseConfig({ data: { ...config, visitor_notice: notice } })?.visitor_notice).toEqual(notice);
+    expect(parseConfig({ data: config })).not.toBeNull();
+    for (const href of ['javascript:alert(1)', 'data:text/html,x', 'https://user:pass@example.test/privacy', '//evil.test'])
+      expect(parseConfig({ data: { ...config, visitor_notice: { ...notice, href } } })).toBeNull();
+    for (const text of ['', ' ', 'x'.repeat(2001), 12])
+      expect(parseConfig({ data: { ...config, visitor_notice: { ...notice, text } } })).toBeNull();
+  });
   it('ответ на вопрос: answered/unknown/лимит/ошибка; ссылка источника javascript: отбрасывается', () => {
     expect(parseAsk(200, { data: { status: 'answered', text: 'Да', source: { title: 'Цены', url: 'javascript:alert(1)', excerpt: 'x' } } }))
       .toEqual({ kind: 'answered', text: 'Да', source: { title: 'Цены', url: null, excerpt: 'x' } });

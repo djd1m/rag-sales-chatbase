@@ -86,7 +86,7 @@ describe('каркас design-shell — разметка', () => {
     expect(hero).toContain('type="text"'); expect(hero).toContain('inputMode="url"');
   });
   it('лендинг: порядок секций FR-LOOK-012 и тарифы в одно действие (FR-LOOK-002)', () => {
-    const order = ['hero-title', 'how-title', 'example-title', 'who-title', 'trust-title', 'plans-title', 'faq-title'].map(id => landing.indexOf(`id="${id}"`));
+    const order = ['hero-title', 'example-title', 'how-title', 'who-title', 'trust-title', 'plans-title', 'faq-title'].map(id => landing.indexOf(`id="${id}"`));
     expect(order.every(i => i > 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     expect(landing).toContain('href="/pricing"');
@@ -96,6 +96,8 @@ describe('каркас design-shell — разметка', () => {
     const answers = { free: { day: 50, month: 300 }, paid: { day: 300, month: 3000 } };
     const html = renderToStaticMarkup(createElement(Pricing, { theme: 'light', answers }));
     const plans = plansFor(answers);
+    expect(plans.map(p => p.name)).toEqual(['Попробовать', 'Для своего сайта', 'Для студии']);
+    expect(html).not.toContain('Чаще выбирают');
     expect(plans.map(p => p.id)).toEqual(['free', 'nobadge', 'studio']);
     // Цены — из PLAN_PRICE_MINOR (копейки), разряды и знак рубля — через неразрывный пробел.
     expect(plans.map(p => p.price)).toEqual(['0\u00a0₽', '990\u00a0₽', '4\u00a0900\u00a0₽']);

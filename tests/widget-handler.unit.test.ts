@@ -2,6 +2,7 @@
 // «ровно ОДИН Access-Control-Allow-Origin»), ResolveWidgetConfig (404/403/200, бейдж — сервер), события бейджа,
 // раздача бандла со старым хэшем (A-N6-034). Хранилище подменено словарём; SQL — tests/widget-config.integration.test.ts.
 import { describe, expect, it } from 'vitest';
+import { readTrustDocument } from '../apps/web/src/lib/trust-legal-catalog';
 import type { WidgetBotRow } from '../packages/db/src/widget';
 import { checkOrigin, requestOrigin } from '../apps/web/src/server/check-origin';
 import { parseAllowedOrigin } from '../packages/rag/src/bot-settings';
@@ -89,7 +90,7 @@ describe('GET /w/v1/config', () => {
     expect(r.headers.get('cache-control')).toBe('no-store');
     const body = await r.json() as { data: Record<string, unknown> };
     const { visitor_session: token, ...rest } = body.data;
-    expect(rest).toEqual({ company_name: 'Пекарня «Колос»', greeting: 'Здравствуйте!', contact: '+7 900 000-00-00',
+    expect(rest).toEqual({ visitor_notice: { text: readTrustDocument('widget-notice').sections[0]!.paragraphs[0], href: PUBLIC + '/legal/privacy' }, company_name: 'Пекарня «Колос»', greeting: 'Здравствуйте!', contact: '+7 900 000-00-00',
       badge_required: true, badge_href: 'https://sufler.example/?from=shop.example&utm_source=badge' });
     // Токен сессии посетителя выдан сервером и подписан для ЭТОГО бота, origin и /24.
     expect(readVisitorToken(SECRET, token, { botId: BOT_ID, origin: HOST, ipPrefix: PREFIX })).toMatch(/^[0-9a-f-]{36}$/);
@@ -227,4 +228,18 @@ describe('GET /w/widget.<hash>.js — бандл и старые хэши (A-N6-
     const r = await createWidgetBundleHandler(async () => null)(new Request(`${PUBLIC}/w/widget.deadbeef.js`), 'widget.deadbeef.js');
     expect(r.status).toBe(404);
   });
+});
+
+// Privacy disclosure is independent of the commercial badge decision.
+it('visitor disclosure stays present on free and paid widget configuration', async () => {
+  for (const plan of ['free', 'nobadge', 'studio']) {
+    const response = await harness(row({ plan })).config(HOST);
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body.data.visitor_notice.href).toBe(PUBLIC + '/legal/privacy');
+    expect(body.data.visitor_notice.text).toContain('вопрос');
+    expect(body.data.visitor_notice.text.length).toBeGreaterThan(30);
+    expect(response.headers.get('access-control-allow-origin')).toBe(HOST);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+  }
 });

@@ -12,11 +12,11 @@ export interface PlanAnswers { free: { day: number; month: number }; paid: { day
 const count = (n: number) => n.toLocaleString('ru-RU');
 export function plansFor(answers: PlanAnswers) {
   return [
-    { id: 'free', name: 'Бесплатный', price: formatRubles(0), period: '', bots: BOTS_BY_PLAN.free, pages: PAGES_BY_PLAN.free, pdf: PDFS_BY_PLAN.free,
-      day: answers.free.day, month: answers.free.month, badge: 'обязателен' },
-    { id: 'nobadge', name: 'Без бейджа', price: formatRubles(PLAN_PRICE_MINOR.nobadge), period: '/мес', bots: BOTS_BY_PLAN.nobadge,
+    { id: 'free', name: 'Попробовать', description: 'Проверьте ответы по своим материалам. В окне чата будет подпись «Работает на Суфлёре».', price: formatRubles(0), period: '', bots: BOTS_BY_PLAN.free, pages: PAGES_BY_PLAN.free, pdf: PDFS_BY_PLAN.free,
+      day: answers.free.day, month: answers.free.month, badge: 'Обязательна' },
+    { id: 'nobadge', name: 'Для своего сайта', description: 'Отвечайте клиентам без подписи Суфлёра в окне чата.', price: formatRubles(PLAN_PRICE_MINOR.nobadge), period: ' / 30 дней', bots: BOTS_BY_PLAN.nobadge,
       pages: PAGES_BY_PLAN.nobadge, pdf: PDFS_BY_PLAN.nobadge, day: answers.paid.day, month: answers.paid.month, badge: 'нет' },
-    { id: 'studio', name: 'Студия', price: formatRubles(PLAN_PRICE_MINOR.studio), period: '/мес', bots: BOTS_BY_PLAN.studio,
+    { id: 'studio', name: 'Для студии', description: 'Ведите ботов клиентов. Подпись в каждом чате зависит от плана клиента.', price: formatRubles(PLAN_PRICE_MINOR.studio), period: ' / 30 дней', bots: BOTS_BY_PLAN.studio,
       pages: PAGES_BY_PLAN.studio, pdf: PDFS_BY_PLAN.studio, day: answers.paid.day, month: answers.paid.month, badge: 'у ботов клиентов на бесплатном плане' },
   ] as const;
 }
@@ -26,18 +26,20 @@ export function Pricing({ theme, answers }: { theme: Theme; answers: PlanAnswers
   const plans = plansFor(answers);
   return <><SiteHeader theme={theme} />
     <main className="center container stack">
-      <header className="stack"><p className="eyebrow">Тарифы</p><h1>Один бот бесплатно. Подпись снимается платным планом</h1>
-        <p className="intro">Оплата — разовая на 30 дней, без автопродления: продлить — оплатить ещё раз.</p></header>
+      <header className="stack"><p className="eyebrow">Тарифы</p><h1>Выберите план для своей задачи</h1>
+        <p className="intro">Платные планы действуют 30 дней. Оплата разовая, без автопродления.</p></header>
       <div className="plans">
         {plans.map(plan => <article key={plan.id} className={`card plan${plan.id === 'nobadge' ? ' featured' : ''}`} aria-labelledby={`plan-${plan.id}`}>
-          {plan.id === 'nobadge' && <p className="plan-label">Чаще выбирают</p>}
           <h2 id={`plan-${plan.id}`}>{plan.name}</h2>
+          <p>{plan.description}</p>
           <p className="price">{plan.price}<small>{plan.period}</small></p>
           {plan.id !== 'free' && <p className="price-note">Цена предварительная</p>}
           {plan.id === 'nobadge' && <p className="badge-row"><span>«Работает на Суфлёре»</span><strong className="accent-text">— убрать</strong></p>}
           <ul>
             <li>Ботов: {count(plan.bots)}</li>
             <li>Страниц на бота: {count(plan.pages)}</li>
+            <li>PDF на бота: {count(plan.pdf)}</li>
+            <li>Ответов в сутки на бота: {count(plan.day)}</li>
             <li>Ответов в месяц на бота: {count(plan.month)}</li>
           </ul>
           <a className={`button${plan.id === 'nobadge' ? '' : ' secondary'}`} href={plan.id === 'free' ? '/#site-url' : `/upgrade?plan=${plan.id}`}>
@@ -48,7 +50,7 @@ export function Pricing({ theme, answers }: { theme: Theme; answers: PlanAnswers
         <div className="table-wrap" tabIndex={0} role="region" aria-label="Таблица сравнения планов">
           <table><thead><tr><th scope="col">Предел</th>{plans.map(p => <th key={p.id} scope="col">{p.name}</th>)}</tr></thead>
             <tbody>
-              <tr><th scope="row">Цена в месяц</th>{plans.map(p => <td key={p.id}>{p.price}{p.id !== 'free' && ' (предварительно)'}</td>)}</tr>
+              <tr><th scope="row">Цена за 30 дней</th>{plans.map(p => <td key={p.id}>{p.price}{p.id !== 'free' && ' (предварительно)'}</td>)}</tr>
               <tr><th scope="row">Ботов</th>{plans.map(p => <td key={p.id}>{count(p.bots)}</td>)}</tr>
               <tr><th scope="row">Страниц на бота</th>{plans.map(p => <td key={p.id}>{count(p.pages)}</td>)}</tr>
               <tr><th scope="row">PDF на бота</th>{plans.map(p => <td key={p.id}>{count(p.pdf)}</td>)}</tr>

@@ -21,6 +21,10 @@ export interface BotScreenProps { botId: string; companyName: string; contact: s
 export interface BotScreenState { answersVerified: boolean; verification: { verifiedAt: string | null; events: VerificationEventView[] }; gate: { resetAt: string | null; stubVisitors: number }; monthAnswers: { used: number; limit: number }; summary: SummaryView | null; publicPage: PublishView }
 
 export function BotScreen(p: BotScreenProps & BotScreenState) {
+  return <BotWorkspace key={p.botId} {...p} />;
+}
+
+function BotWorkspace(p: BotScreenProps & BotScreenState) {
   const router = useRouter();
   const active = p.sources.some((s) => s.job && (s.job.state === 'running' || s.job.state === 'no_response'));
   useEffect(() => {
@@ -84,9 +88,9 @@ export function BotScreen(p: BotScreenProps & BotScreenState) {
     try {
       const { status, body } = await send(`/api/bots/${p.botId}/ask`, 'POST', { question });
       if (status === 429) { setMessages((m) => [...m, { kind: 'question', text: question }, { kind: 'refused', text: errorOf(body)?.message ?? 'Лимит исчерпан' }]); setDraft(''); return; }
-      const data = dataOf<{ status: string; text: string; source?: { title: string; url: string | null; excerpt: string } }>(body);
+      const data = dataOf<{ status: string; text: string; contact?: string | null; source?: { title: string; url: string | null; excerpt: string } }>(body);
       if (status !== 200 || !data) { setChatError(errorOf(body)?.message ?? 'Не удалось получить ответ. Повторите'); return; }
-      const reply: OwnerMessage = data.status === 'answered' && data.source ? { kind: 'answered', text: data.text, source: data.source } : { kind: 'unknown', text: data.text };
+      const reply: OwnerMessage = data.status === 'answered' && data.source ? { kind: 'answered', text: data.text, source: data.source } : data.status === 'small_talk' ? { kind: 'small_talk', text: data.text } : { kind: 'unknown', text: data.text, contact: data.contact };
       setMessages((m) => [...m, { kind: 'question', text: question }, reply]); setDraft('');
     } catch { setChatError('Нет связи с сервером. Повторите'); } finally { setAsking(false); }
   };
@@ -173,7 +177,7 @@ export function BotScreen(p: BotScreenProps & BotScreenState) {
     sourcesBlock={<><SourceList sources={p.sources} busy={busySource} confirming={confirming} errors={sourceErrors}
         onReindex={(id) => { void reindex(id); }} onConfirm={setConfirming} onDelete={(id) => { void removeSource(id); }} />
       <AddSource url={url} busy={adding} errors={sourceErrors} onUrl={setUrl} onSite={() => { void addSite(); }} onPdf={(f) => { void addPdf(f); }} botId={p.botId} /></>}
-    chat={<OwnerChat companyName={p.companyName} messages={messages} draft={draft} busy={asking} error={chatError}
+    chat={<OwnerChat botId={p.botId} contact={p.contact} companyName={p.companyName} messages={messages} draft={draft} busy={asking} error={chatError}
       ready={p.sources.some((s) => s.job?.state === 'done')} onDraft={setDraft} onAsk={() => { void ask(); }} />}
     settings={<>{saved && <p role="status" className="notice">Настройки сохранены</p>}
       <BotForm idPrefix="bot" name={settings.name} contact={settings.contact} greeting={settings.greeting} errors={settingsErrors} busy={saving}

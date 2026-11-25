@@ -1,8 +1,6 @@
-// Экраны предпросмотра (фича preview-flow, CJM H: «Чтение сайта» → «Предпросмотр на ВАШЕМ сайте»). Только разметка по
-// пропсам, без состояния и запросов: ту же разметку рендерит браузерный набор прибора (tests/browser/preview-flow.test.ts),
-// состояние и опрос — PreviewScreen. Написано заново (ADR-016); классы и токены — design-shell (globals.css).
-// Три состояния задачи различимы на экране (long-running-job): прогресс «k из ≤ 20» · окно чата · причина отказа;
-// четвёртое — «нет ответа», а не вечный прогресс.
+import { useEffect, useId, useRef } from 'react';
+import { OwnerAnswerSource, OwnerChecks } from '../OwnerAnswerSource';
+import { isPreviewJobId } from '../../lib/preview-intent';
 import { pagesWord } from '../../lib/source-ribbon';
 
 export type JobState = 'running' | 'done' | 'failed' | 'no_response';
@@ -20,15 +18,16 @@ export interface SourceView { title: string; url: string | null; excerpt: string
 export type ChatMessage =
   | { kind: 'question'; text: string }
   | { kind: 'answered'; text: string; source: SourceView; firstAnswer: boolean }
-  | { kind: 'unknown'; text: string }
+  | { kind: 'unknown'; text: string; contact?: string | null }
+  | { kind: 'small_talk'; text: string }
   | { kind: 'refused'; text: string };
 
 // Причины канона §4 (index_job.failure_reason) → текст владельцу. Неизвестная — как internal.
 const REASONS: Readonly<Record<string, { title: string; hint: string }>> = {
-  robots_disallowed: { title: 'Сайт запрещает чтение роботам (robots.txt)', hint: 'Сохраните бота и загрузите прайс или памятку в PDF — бот ответит по ним.' },
+  robots_disallowed: { title: 'Сайт запрещает чтение роботам (robots.txt)', hint: 'Выберите другой адрес или добавьте PDF после входа в кабинет.' },
   unreachable: { title: 'Сайт не открылся', hint: 'Проверьте адрес: сайт должен открываться без входа по паролю.' },
   blocked_address: { title: 'Этот адрес мы не читаем', hint: 'Адрес ведёт во внутреннюю или служебную сеть. Укажите публичный адрес сайта.' },
-  no_text: { title: 'На сайте не нашлось текста', hint: 'Похоже, страницы собираются скриптами в браузере. Загрузите материалы в PDF после сохранения.' },
+  no_text: { title: 'На сайте не нашлось текста', hint: 'Похоже, страницы собираются скриптами в браузере. В кабинете можно загрузить материалы из PDF.' },
   // Две причины под одним кодом (ревью budget-truncation, находка 2): первая же страница больше бюджета предпросмотра
   // ИЛИ исчерпан суточный лимит сервиса. Текст честен для обеих и не обещает того, что регистрация не снимет.
   // Бюджет, исчерпанный ПОСЛЕ прочитанных страниц, — не отказ, а готовый предпросмотр с пометкой (A-N6-052).
@@ -38,7 +37,13 @@ const REASONS: Readonly<Record<string, { title: string; hint: string }>> = {
   internal: { title: 'Не удалось прочитать сайт', hint: 'Попробуйте ещё раз или укажите другой адрес.' },
 };
 export const reasonText = (reason: string | undefined) => REASONS[reason ?? 'internal'] ?? REASONS.internal!;
-const safeHref = (url: string | null) => (url && /^https?:\/\//i.test(url) ? url : null);
+export function PreviewNextSteps({ jobId }: { jobId: string }) {
+  return <div className="stack"><p className="cluster"><a className="button" href={isPreviewJobId(jobId) ? `/preview?retry=${jobId}` : '/preview'}>Указать другой адрес</a>
+    <a className="button secondary" href="/preview?source=pdf">Начать с PDF</a></p>
+    <p className="muted">Для загрузки PDF нужен вход в кабинет.</p>
+    {isPreviewJobId(jobId) && <details><summary>Данные для поддержки</summary><p className="muted">Задача {jobId}</p></details>}
+  </div>;
+}
 
 export function PreviewProgress({ host, view }: { host: string; view: PreviewJobView }) {
   if (view.state === 'failed') {
@@ -46,71 +51,57 @@ export function PreviewProgress({ host, view }: { host: string; view: PreviewJob
     return <section className="preview-status stack" aria-labelledby="preview-title">
       <h1 id="preview-title" className="page-title">Бот не собрался</h1>
       <p role="alert" className="notice danger-notice"><strong>{text.title}.</strong> {text.hint}</p>
-      <p className="muted">Задача {view.index_job_id}{host ? ` · ${host}` : ''}</p>
-      <p><a className="button" href="/#site-url">Попробовать другой адрес</a></p>
+      <PreviewNextSteps jobId={view.index_job_id} />
     </section>;
   }
   if (view.state === 'no_response') {
     return <section className="preview-status stack" aria-labelledby="preview-title">
       <h1 id="preview-title" className="page-title">Проверяем, что с чтением сайта</h1>
       <p role="status" className="notice">Больше 5 минут не было новостей от задачи — это не «ещё читаем». Мы перепроверим и закроем её с причиной, если она остановилась.</p>
-      <p className="muted">Задача {view.index_job_id}</p>
-      <p><a className="button secondary" href="/#site-url">Начать с другим адресом</a></p>
+      <PreviewNextSteps jobId={view.index_job_id} />
     </section>;
   }
   const total = Math.min(view.pages_total ?? view.page_budget, view.page_budget);
   const done = Math.min(view.pages_done, total || view.page_budget);
   return <section className="preview-status stack" aria-labelledby="preview-title">
     <h1 id="preview-title" className="page-title">Читаем {host || 'сайт'}</h1>
-    <p className="muted">Задача {view.index_job_id} · обычно 1–3 минуты</p>
+
     <div className="progress" role="progressbar" aria-label="Прочитано страниц" aria-valuemin={0} aria-valuemax={view.page_budget} aria-valuenow={done}
       aria-valuetext={`${done} из ${view.page_budget}`}><span style={{ width: `${Math.round((done / view.page_budget) * 100)}%` }} /></div>
     <p aria-live="polite">Читаем сайт: <strong>{done}</strong> из ≤ {view.page_budget} страниц · фрагментов: {view.chunks_done}</p>
-    <ol className="plain-list muted">
-      <li>robots.txt прочитан — обходим вежливо, по одной странице в секунду.</li>
-      <li>Текст страниц режем на фрагменты: по ним бот и будет отвечать.</li>
-      <li>Предпросмотр читает до {view.page_budget} страниц; после регистрации — весь сайт и PDF.</li>
-    </ol>
+    <p className="muted">Когда чтение завершится, здесь можно будет задать вопрос по материалам сайта.</p>
+    <details><summary>Данные для поддержки</summary><p>Задача {view.index_job_id}</p></details>
   </section>;
 }
 
-function Message({ message, signedIn, onSave, onShare, saving }: { message: ChatMessage; signedIn: boolean; onSave: () => void; onShare?: () => void; saving: boolean }) {
-  if (message.kind === 'question') return <li className="chat-question">{message.text}</li>;
-  if (message.kind === 'refused') {
-    // role=alert — на вложенном элементе: у <li> роль остаётся listitem (axe: list).
-    return <li className="chat-answer chat-refused"><span role="alert">{message.text}</span>{' '}
-      <a href="/login?mode=register&from=preview">Зарегистрироваться</a></li>;
-  }
-  if (message.kind === 'unknown') return <li className="chat-answer">{message.text}</li>;
-  const href = safeHref(message.source.url);
-  return <li className="chat-answer-group">
-    <div className="chat-answer">{message.text}</div>
-    {/* Владельцу в предпросмотре — развёрнутая цитата по умолчанию (FR-WIDGET-004, PD-INSIGHT-001). */}
-    <details className="source-quote" open>
-      <summary><span>Источник:</span> <strong>{message.source.title}</strong></summary>
-      <blockquote>{message.source.excerpt}</blockquote>
-      {href && <a href={href} target="_blank" rel="noopener nofollow noreferrer">Открыть страницу ↗</a>}
-    </details>
-    {/* FR-GROWTH-001: призыв РОВНО под первым answered этого бота (сервер решает, первый ли). */}
-    {message.firstAnswer && <div className="aha stack" role="region" aria-label="Бот готов">
-      <p><strong className="accent-text">✓ Бот ответил по вашему сайту и показал источник.</strong></p>
-      {signedIn
-        ? <button type="button" onClick={onSave} disabled={saving}>{saving ? 'Сохраняем…' : 'Сохранить бота и поставить на сайт'}</button>
-        : <a className="button" href="/login?mode=register&from=preview">Сохранить бота и поставить на сайт</a>}
-      {/* Второе действие CTA (public-page-and-summary): клик пишет share_cta_click, демо-страницу публикует владелец в кабинете. */}
-      {onShare && <button type="button" className="secondary" onClick={onShare} disabled={saving}>Поделиться ссылкой на бота</button>}
-    </div>}
-  </li>;
+// A numeric target identifies the particular unknown reply that offered contact setup.
+export type ClaimTarget = number | 'save' | 'share';
+export interface ClaimFeedback { target: ClaimTarget; message: string; action?: { href: string; label: string } }
+
+function ClaimControl({ label, busy, onClick, error, secondary }: {
+  label: string; busy: boolean; onClick: () => void; error?: ClaimFeedback | null; secondary?: boolean;
+}) {
+  const id = useId();
+  const control = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (error && control.current?.contains(document.activeElement)) control.current.scrollIntoView({ block: 'nearest' });
+  }, [error]);
+  return <div className="claim-control" ref={control}>
+    <button type="button" className={secondary ? 'secondary' : undefined} aria-disabled={busy}
+      aria-describedby={error ? id : undefined} onClick={() => { if (!busy) onClick(); }}>{label}</button>
+    {error && <p id={id} role="alert" className="chat-error">{error.message}
+      {error.action && <> <a href={error.action.href}>{error.action.label}</a></>}</p>}
+  </div>;
 }
 
 export interface PreviewChatProps {
   site: PreviewSiteView; messages: ChatMessage[]; questionsLeft: number | null; draft: string; busy: boolean; error: string;
-  signedIn: boolean; saving: boolean;
+  signedIn: boolean; saving: boolean; claimError?: ClaimFeedback | null;
   // Число прочитанных страниц, если предпросмотр усечён бюджетом (A-N6-052); null — не усечён.
   truncatedPages?: number | null;
   // Чем усечён (crawl-coverage): crawl_limit показывается своим текстом; прочее — бюджет предпросмотра.
   truncatedBy?: string | null;
-  onDraft: (value: string) => void; onAsk: (question: string) => void; onSave: () => void; onShare?: () => void;
+  onDraft: (value: string) => void; onAsk: (question: string) => void; onSave: (target: ClaimTarget) => void; onShare?: () => void;
 }
 export function PreviewChat(p: PreviewChatProps) {
   const host = p.site.host || 'ваш сайт';
@@ -123,8 +114,12 @@ export function PreviewChat(p: PreviewChatProps) {
     <div className="preview-grid">
       <div className="chat-window" role="group" aria-label={`Бот сайта ${host}`}>
         <p className="chat-title"><strong>Бот {host}</strong></p>
-        {p.messages.length > 0 && <ul className="chat-log" aria-live="polite">{p.messages.map((m, i) =>
-          <Message key={i} message={m} signedIn={p.signedIn} onSave={p.onSave} onShare={p.onShare} saving={p.saving} />)}</ul>}
+        <OwnerAnswerSource messages={p.messages} onMissingContact={index => <div className="stack">
+          <p>Укажите в кабинете, как клиенту связаться с компанией.</p>
+          {p.signedIn ? <ClaimControl label="Сохранить черновик для настройки контакта" busy={p.saving}
+            onClick={() => p.onSave(index)} error={p.claimError?.target === index ? p.claimError : null} />
+            : <a className="source-alternative" href="/login?mode=register&from=preview">Войти и настроить контакт</a>}
+        </div>} />
         {p.messages.length === 0 && p.site.suggestions.length > 0 && <div className="suggestions" role="group" aria-label="Подсказки">
           {p.site.suggestions.map((s) => <button key={s} type="button" className="secondary" disabled={p.busy} onClick={() => p.onAsk(s)}>{s}</button>)}
         </div>}
@@ -148,5 +143,16 @@ export function PreviewChat(p: PreviewChatProps) {
         <p className="mock-lines" aria-hidden="true"><span /><span /><span /></p>
       </div>
     </div>
+    <OwnerChecks />
+    {p.messages.some(m => m.kind === 'answered' && m.firstAnswer) && <section className="aha stack" aria-label="Бот готов">
+      <p>Бот ответил по материалам сайта и показал источник.</p>
+      <div className="cluster">{p.signedIn
+        ? <ClaimControl label={p.saving ? 'Сохраняем…' : 'Сохранить бота и поставить на сайт'} busy={p.saving}
+          onClick={() => p.onSave('save')} error={p.claimError?.target === 'save' ? p.claimError : null} />
+        : <a className="button" href="/login?mode=register&from=preview">Сохранить бота и поставить на сайт</a>}
+        {p.onShare && <ClaimControl label="Поделиться ссылкой на бота" secondary busy={p.saving}
+          onClick={p.onShare} error={p.claimError?.target === 'share' ? p.claimError : null} />}
+      </div><p className="muted">Публичную страницу можно включить отдельно в кабинете.</p>
+    </section>}
   </section>;
 }

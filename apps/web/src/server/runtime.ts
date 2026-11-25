@@ -7,9 +7,16 @@ import { readEnvironment } from './environment';
 import { AuthService } from './auth';
 import { PgAuthStore } from './auth-store';
 import { selectPaymentProvider } from './payments/config';
+import { readCustomerMailSettings, createCustomerMailTransport } from '@n6/notifications';
+import { loadCustomerSupportSettings } from './customer-support-settings';
 
 function createRuntime() {
-  const config = loadWebConfig(readEnvironment());
+  const environment = readEnvironment();
+  const config = loadWebConfig(environment);
+  const settings = readCustomerMailSettings(environment);
+  const mail = { settings, transport: createCustomerMailTransport(settings) };
+  const support = loadCustomerSupportSettings(environment);
+  const payments = selectPaymentProvider(environment);
   const pool = createPool(config.databaseUrl);
   // Сырые ошибки драйвера не журналируются: в них могут быть параметры соединения.
   pool.on('error', () => console.error('Соединение БД потеряно: сессии временно недоступны'));
@@ -17,8 +24,7 @@ function createRuntime() {
     enableOfflineQueue: false, retryStrategy: () => null });
   redis.on('error', () => console.error('Redis недоступен: запросы будут отклонены ограничителем'));
   // Оплата (A-N6-040): null — выключена (off), экран интереса; провайдер строится один раз на процесс.
-  const payments = selectPaymentProvider(readEnvironment());
-  return { config, pool, redis, payments, auth: new AuthService(new PgAuthStore(pool), config.sessionSecret) };
+  return { config, pool, redis, payments, mail, support, auth: new AuthService(new PgAuthStore(pool), config.sessionSecret) };
 }
 // Next может загрузить instrumentation и обработчики отдельными бандлами: кеш общий для процесса.
 const runtimeGlobal = globalThis as typeof globalThis & { n6Runtime?: ReturnType<typeof createRuntime> };

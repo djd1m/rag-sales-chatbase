@@ -1,0 +1,15 @@
+flowchart LR
+    Preview["Публичный предпросмотр<br/>preview, index_job"]
+    Account["Вход и customer-trust<br/>account, session, next"]
+    Cabinet["Кабинет владельца<br/>bot, source, contact, answers_verified"]
+    Plans["Планы и оплата<br/>plan, доступ, квоты"]
+    Answers["Контур ответов<br/>answered, source, unknown"]
+    Widget["Внешний виджет<br/>origin, first_config, first_answer"]
+    Preview -->|"Потребитель API ответов"| Answers
+    Cabinet -->|"Потребитель API ответов"| Answers
+    Preview -->|"Точный адрес продолжения и существующий claim"| Account
+    Account -->|"Действительная сессия и контекст фактического исхода"| Cabinet
+    Preview -->|"Одноразовый исход явного сохранения"| Cabinet
+    Cabinet -->|"Потребитель плана и лимитов"| Plans
+    Widget -->|"Публичный контракт виджета"| Answers
+    Widget -->|"Настройки допуска и контакта"| Cabinet

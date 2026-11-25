@@ -10,8 +10,9 @@
 //                              (ключ повторности → применение). Недоступность ЮKassa — 503 без единой записи; повтор
 //                              проходит полным путём (урок N1: потерянная оплата).
 import { createHash } from 'node:crypto';
-import { PLAN_PRICE_MINOR, isPaidPlan, type PaidPlan } from '@n6/rag';
-import type { ApplyPaymentOutcome, CreateIntentResult, IntentView, InterestOriginScreen, PaymentProviderName, VerifiedPayment } from '@n6/db';
+import { isPaidPlan, type PaidPlan } from '@n6/rag';
+import type { ApplyPaymentOutcome, openVerifiedPaymentIntent, IntentView, InterestOriginScreen, PaymentProviderName, VerifiedPayment } from '@n6/db';
+import { readTrustDocument } from '../lib/trust-legal-catalog';
 import { readSessionCookie } from './auth-handler';
 import { body, guardMutation } from './cabinet-handler';
 import { clientIp } from './ip';
@@ -28,7 +29,8 @@ export interface BillingDependencies {
   allowMutation: (ip: string, account?: string) => Promise<boolean>;
   // null — оплата выключена (N6_PAYMENTS_MODE=off): оформление отвечает 409 payments_off, вебхук — 404.
   provider: PaymentProvider | null;
-  createIntent: (input: { accountId: string; plan: PaidPlan; priceMinor: number; idempotencyKey: string }) => Promise<CreateIntentResult>;
+  tokenHash: (token: string) => string;
+  createIntent: (input: Parameters<typeof openVerifiedPaymentIntent>[1]) => ReturnType<typeof openVerifiedPaymentIntent>;
   // false — у намерения уже ДРУГОЙ платёж: второй платёж по одному намерению — отказ, а не молчание.
   setIntentPayment: (intentId: string, providerPaymentId: string) => Promise<boolean>;
   readIntent: (intentId: string, accountId: string) => Promise<IntentView | null>;
@@ -60,7 +62,7 @@ export function createCheckoutHandler(deps: BillingDependencies) {
   return (request: Request) => run(deps, 'оформление', async () => {
     const entry = await guardMutation(request, deps, unauthorized);
     if (entry instanceof Response) return entry;
-    const input = await body(request, ['plan', 'idempotency_key']);
+    const input = await body(request, ['plan', 'idempotency_key', 'offer_version']);
     if (input instanceof Response) return input;
     // Строгое равенство (ADR-004): 'NOBADGE', ' nobadge', 'free' — не платный план.
     if (!isPaidPlan(input.plan)) return fail(422, 'invalid_plan', 'Выберите план «Без бейджа» или «Студия»');
@@ -71,8 +73,27 @@ export function createCheckoutHandler(deps: BillingDependencies) {
     // Оплата не настроена — отказ с понятным кодом, а не «примем на фейке» (honest-configuration).
     if (!provider) return fail(409, 'payments_off', 'Оплата скоро откроется — оставьте заявку, мы сообщим');
     const plan = input.plan;
-    const created = await deps.createIntent({ accountId: entry.accountId, plan, priceMinor: PLAN_PRICE_MINOR[plan], idempotencyKey: input.idempotency_key });
-    if (created.kind === 'conflict') return fail(409, 'idempotency_conflict', 'Этот ключ уже использован для другого плана. Обновите страницу');
+    if (typeof input.offer_version !== 'string' || !input.offer_version || input.offer_version.length > 128) return fail(422, 'offer_required', 'Ознакомьтесь с редакцией оферты');
+    const offer = readTrustDocument('offer');
+    const opening = {
+      accountId: entry.accountId, plan, sessionHash: deps.tokenHash(readSessionCookie(request)!),
+      serializePayment: provider.serializePayment, idempotencyKey: input.idempotency_key, offerVersion: input.offer_version, offer, fiscal: provider.fiscal ?? null,
+      shop: provider.shop ?? '', publicOrigin: deps.publicOrigin, description: `Суфлёр: план «${PLAN_TITLE[plan]}» на 30 дней`
+    };
+    const eligibility = await deps.createIntent({ ...opening, preflightOnly: true });
+    if (eligibility.kind === 'eligible') await provider.attestEnvironment?.();
+    const created = eligibility.kind === 'eligible' ? await deps.createIntent(opening) : eligibility;
+    switch (created.kind) {
+      case 'eligible': return fail(503, 'unavailable', 'Не удалось оформить заказ. Попробуйте ещё раз');
+      case 'unauthorized': return unauthorized();
+      case 'email_verification_required': return fail(403, created.kind, 'Подтвердите текущую почту для получения чека');
+      case 'offer_version_changed': return json({ error: { code: created.kind, message: 'Оферта обновилась. Ознакомьтесь с новой редакцией и подтвердите покупку.', version: offer.version } }, 409);
+      case 'fiscal_unavailable': return fail(409, created.kind, 'Настройка кассы для новых покупок ещё не завершена');
+      case 'plan_conflict': return fail(409, created.kind, 'Активную Студию можно продлить только планом Студия');
+      case 'checkout_in_progress':
+      case 'payment_reconciliation_required': return json({ error: { code: created.kind, message: 'Проверьте состояние предыдущей оплаты.', intent_id: created.intentId } }, 409);
+      case 'conflict': return fail(409, 'idempotency_conflict', 'Этот ключ уже использован для другого плана');
+    }
     const intent = created.intent;
     if (intent.status !== 'created') return json({ data: { intent_id: intent.id, redirect_url: null, status: intent.status } });
     try {
@@ -81,30 +102,48 @@ export function createCheckoutHandler(deps: BillingDependencies) {
       // оплачен или ждёт подтверждения — на экран возврата (план выдаст уведомление).
       if (intent.provider_payment_id) {
         const existing = await provider.getPayment(intent.provider_payment_id);
+        if (existing.id !== intent.provider_payment_id || existing.orderId !== intent.id || existing.amountMinor !== intent.price_minor)
+          return json({ error: { code: 'payment_reconciliation_required', message: 'Требуется сверка оплаты', intent_id: intent.id } }, 409);
         if (existing.status === 'pending' && existing.confirmationUrl) {
           return json({ data: { intent_id: intent.id, redirect_url: existing.confirmationUrl, status: 'created' } }, 201);
         }
-        if (existing.status === 'canceled') { await deps.markCanceled(intent.id); return json({ data: { intent_id: intent.id, redirect_url: null, status: 'canceled' } }); }
+        if (existing.status === 'canceled') {
+          await deps.markCanceled(intent.id);
+          const latest = await deps.readIntent(intent.id, entry.accountId);
+          return json({ data: { intent_id: intent.id, redirect_url: null, status: latest?.status ?? 'reconciliation_required' } });
+        }
         return json({ data: { intent_id: intent.id, redirect_url: null, status: 'created' } });
       }
       // Сетевой вызов ВНЕ транзакции (shared-resource-verification п.1). Ключ идемпотентности у ЮKassa — id намерения:
       // повтор с тем же ключом клиента не создаёт второй платёж.
+      const snapshot = intent.checkout_snapshot;
+      if (!snapshot || !intent.first_post_at || Date.now() - intent.first_post_at.getTime() >= (24 * 60 - 10) * 60_000)
+        return json({ error: { code: 'payment_reconciliation_required', intent_id: intent.id, message: 'Требуется сверка оплаты' } }, 409);
       const payment = await provider.createPayment({
         orderId: intent.id, amountMinor: intent.price_minor,
-        returnUrl: new URL(`/upgrade/return?intent=${intent.id}`, deps.publicOrigin).href,
-        description: `Суфлёр: план «${PLAN_TITLE[plan]}» на 30 дней`,
+        returnUrl: new URL(`/upgrade/return?intent=${intent.id}`, snapshot.publicOrigin).href,
+        serializedBody: snapshot.serializedBody, description: snapshot.description, receipt: { email: snapshot.email, fiscal: snapshot.fiscal },
       });
-      if (!payment.confirmationUrl) return fail(503, 'payment_provider_failed', 'Платёжный сервис не выдал форму оплаты. Повторите позже');
+      if (payment.orderId !== intent.id || payment.amountMinor !== intent.price_minor) throw new PaymentVerificationError('Неверная привязка платежа');
       if (!await deps.setIntentPayment(intent.id, payment.id)) {
         logOf(deps)('Оплата: у намерения уже другой платёж — второй не выдаётся');
         return fail(409, 'intent_has_payment', 'По этой оплате уже создан платёж. Обновите страницу');
       }
-      return json({ data: { intent_id: intent.id, redirect_url: payment.confirmationUrl, status: 'created' } }, 201);
+      const bound = await deps.readIntent(intent.id, entry.accountId);
+      if (!bound) return unauthorized();
+      if (bound.status !== 'created') return json({ data: { intent_id: intent.id, status: bound.status, redirect_url: null } });
+      return json({ data: { intent_id: intent.id, redirect_url: payment.status === 'pending' ? payment.confirmationUrl : null, status: bound.status } }, 201);
     } catch (error) {
       // Намерение остаётся created: повтор с тем же ключом попадёт в него же.
-      if (error instanceof PaymentProviderUnavailable) return fail(503, 'payment_provider_unavailable', 'Платёжный сервис временно недоступен. Повторите через минуту');
+      if (error instanceof PaymentProviderUnavailable) return json({
+        error: {
+          code: 'payment_provider_unavailable', intent_id: intent.id,
+          message: 'Исход запроса пока неизвестен. Можно проверить статус или повторить эту же попытку через минуту.'
+        }
+      }, 503);
       if (error instanceof PaymentVerificationError) {
-        logOf(deps)(`Оплата: провайдер отклонил создание платежа (${error.message.slice(0, 120)})`);
+        if (intent.provider_payment_id) return json({ error: { code: 'payment_reconciliation_required', message: 'Требуется сверка оплаты', intent_id: intent.id } }, 409);
+        logOf(deps)('Оплата: провайдер отклонил создание платежа');
         return fail(503, 'payment_provider_failed', 'Платёжный сервис отклонил платёж. Повторите позже');
       }
       throw error;
@@ -115,24 +154,30 @@ export function createCheckoutHandler(deps: BillingDependencies) {
 // GET /api/checkout/{intent_id} — опрос экрана возврата: pending | succeeded | canceled. Чужое намерение — 404.
 export function createCheckoutStatusHandler(deps: BillingDependencies) {
   return (request: Request, intentId: string) => run(deps, 'статус оплаты', async () => {
+    const origin = request.headers.get('origin');
+    if (origin && origin !== new URL(deps.publicOrigin).origin) return fail(403, 'origin_not_allowed', 'Источник запроса не разрешён');
     const token = readSessionCookie(request);
     const session = token ? await deps.authenticate(token) : null;
     if (!session) return unauthorized();
     if (!INTENT_ID.test(intentId)) return fail(404, 'not_found', 'Оплата не найдена');
     const view = await deps.readIntent(intentId, session.account_id);
     if (!view) return fail(404, 'not_found', 'Оплата не найдена');
-    let status: 'pending' | 'succeeded' | 'canceled' = view.status === 'created' ? 'pending' : view.status;
+    let status: 'pending' | 'succeeded' | 'canceled' | 'reconciliation_required' = view.status === 'created' ? 'pending' : view.status;
     // Отмену видит только провайдер (уведомление payment.canceled мы не принимаем): спросить его. Сбой опроса — это
     // «неизвестно», то есть по-прежнему pending, а не отказ оплаты.
-    if (status === 'pending' && view.provider_payment_id && deps.provider) {
+    if (view.shop && deps.provider && view.shop !== deps.provider.shop && status === 'pending') status = 'reconciliation_required';
+    if ((status === 'pending' || status === 'reconciliation_required') && view.provider_payment_id && deps.provider &&
+      (!view.shop || view.shop === deps.provider.shop)) {
       try {
         const remote = await deps.provider.getPayment(view.provider_payment_id);
-        if (remote.status === 'canceled') { await deps.markCanceled(view.id); status = 'canceled'; }
+        if (remote.id !== view.provider_payment_id || remote.amountMinor !== view.price_minor || remote.orderId !== view.id) status = 'reconciliation_required';
+        else if (status === 'pending' && remote.status === 'canceled') { await deps.markCanceled(view.id); status = 'canceled'; }
       } catch (error) {
-        if (!(error instanceof PaymentProviderUnavailable) && !(error instanceof PaymentVerificationError)) throw error;
+        if (error instanceof PaymentVerificationError) status = 'reconciliation_required';
+        else if (!(error instanceof PaymentProviderUnavailable)) throw error;
       }
     }
-    return json({ data: { intent_id: view.id, plan: view.plan, status, account_plan: view.account_plan, plan_paid_until: view.plan_paid_until } });
+    return json({ data: { intent_id: view.id, plan: view.plan, status, account_plan: view.account_plan, plan_paid_until: view.plan_paid_until, applied_paid_until: view.applied_paid_until } });
   });
 }
 
@@ -199,11 +244,13 @@ export function createPaymentWebhookHandler(deps: BillingDependencies) {
     const p = verified.payment;
     if (verified.kind === 'refund_succeeded') {
       const outcome = await deps.recordRefund({ provider: name, eventKey: `refund_succeeded:${verified.refund.id}`, payloadSha256,
-        payment: { id: p.id, orderId: p.orderId, amountMinor: p.amountMinor, feeMinor: p.feeMinor, paidAt: p.paidAt } });
+        payment: { shop: provider.shop, id: p.id, orderId: p.orderId, amountMinor: p.amountMinor, feeMinor: p.feeMinor, paidAt: p.paidAt }
+      });
       return json({ data: outcome });
     }
     const outcome = await deps.applyPayment({ provider: name, eventKey: `payment_succeeded:${p.id}`, payloadSha256,
-      payment: { id: p.id, orderId: p.orderId, amountMinor: p.amountMinor, feeMinor: p.feeMinor, paidAt: p.paidAt } });
+      payment: { shop: provider.shop, id: p.id, orderId: p.orderId, amountMinor: p.amountMinor, feeMinor: p.feeMinor, paidAt: p.paidAt }
+    });
     return json({ data: outcome });
   });
 }

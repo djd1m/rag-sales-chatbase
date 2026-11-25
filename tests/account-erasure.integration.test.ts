@@ -2,11 +2,14 @@
 // клиент, журнал вопросов. AC-1…AC-12 плана (docs/features/account-erasure/01_plan.md) и конкурентные случаи AC-6
 // (shared-resource-verification): удаление ↔ оплата, удаление ↔ приём приглашения, удаление ↔ «Обновить» источника.
 // Решения владельца — A-N6-054.
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import bcrypt from 'bcrypt';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { acceptStudioInvite, applyVerifiedPayment, createPaymentIntent, createPool, createStudioInvite, eraseAccount, eraseBotQuestionLog,
   listErasableAccounts, listOwedPayouts, observeErasureOverdue, readErasurePreview, recordPartnerPayout, reindexSource, requestErasure, savePayoutDetails, type Pool } from '../packages/db/src/index';
+import { openVerifiedPaymentIntent } from '../packages/db/src/payments';
+import { runPurchaseMailTick } from '../apps/worker/src/purchase-mail-watchdog';
+import { PurchaseMailDeliveryStore } from '../packages/db/src/purchase-mail-delivery';
 import { migrate } from '../packages/db/src/migrate';
 import { createAccountDependencies } from '../apps/web/src/server/account-runtime';
 import { createAccountDeleteHandler } from '../apps/web/src/server/account-handler';
@@ -30,6 +33,7 @@ const hex64 = (s: string) => createHash('sha256').update(s).digest('hex');
 // ЕДИНЫЙ РЕЕСТР (AC-7): у КАЖДОЙ таблицы схемы — решение о строках стираемого аккаунта. Новая таблица без решения
 // роняет тест: молча забытая таблица и есть неполное стирание.
 const REGISTRY: Record<string, 'erase' | 'keep' | 'unrelated'> = {
+  customer_email_proof: 'erase', legal_acceptance: 'erase', purchase_mail_delivery: 'erase',
   account: 'keep', session: 'erase', bot: 'erase', allowed_origin: 'erase', source: 'erase', page: 'erase', chunk: 'erase', index_job: 'erase',
   job_attempt: 'erase', preview: 'erase', visitor_session: 'erase', question_log: 'erase', widget_install: 'erase', quota_counter: 'erase',
   growth_event: 'keep', attribution: 'erase', studio_invite: 'erase', pro_interest: 'erase', payment_intent: 'erase', payment_event: 'unrelated',
@@ -159,6 +163,69 @@ describe.skipIf(!databaseUrl)('удаление аккаунта на насто
     expect(await auth.login(a.mail, PASSWORD, '198.51.100.0/24')).toBeNull();
     expect(await auth.register(a.mail, 'another-pass-1', '198.51.100.0/24')).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(await one('SELECT count(*) FROM account WHERE email = $1', [a.mail])).toBe(1);
+  });
+
+  it('erasure clears customer trust copies across dispatch and late webhook races', async () => {
+    const store = new PurchaseMailDeliveryStore(pool);
+    for (const phase of ['queued', 'leased', 'sending', 'accepted'] as const) {
+      const a = await account();
+      const [session] = await q<{ token_hash: string }>('SELECT token_hash FROM session WHERE account_id=$1', [a.id]);
+      await pool.query('UPDATE account SET email_verified_at=now() WHERE id=$1', [a.id]);
+      await pool.query("INSERT INTO legal_acceptance(account_id,kind,version,digest) VALUES($1,'terms','v1',$2)", [a.id, hex64(a.id)]);
+      await pool.query("INSERT INTO customer_email_proof(account_id,purpose,email,digest,expires_at) VALUES($1,'reset',$2,$3,now()+interval '1h')", [a.id, a.mail, hex64(a.mail)]);
+      const opened = await openVerifiedPaymentIntent(pool, {
+        accountId: a.id, sessionHash: session!.token_hash, plan: 'nobadge', idempotencyKey: randomUUID(),
+        offerVersion: 'v1', offer: { version: 'v1', digest: hex64('offer') }, shop: 'fake:local', publicOrigin: PUBLIC, description: 'Без бейджа',
+        fiscal: { vat_code: 1, payment_mode: 'full_payment', payment_subject: 'service' }
+      });
+      if (opened.kind !== 'created') throw Error(opened.kind);
+      const id = randomUUID(), intent = opened.intent.id;
+      const payment = { id, orderId: intent, shop: 'fake:local', amountMinor: 99000, feeMinor: 0, paidAt: new Date().toISOString() };
+      const event = { provider: 'fake' as const, eventKey: 'payment_succeeded:' + id, payloadSha256: hex64(id), payment };
+      expect((await applyVerifiedPayment(pool, event)).applied).toBe(true);
+      let started!: () => void, release!: () => void;
+      const reached = new Promise<void>(resolve => { started = resolve; });
+      const proceed = new Promise<void>(resolve => { release = resolve; });
+      const admit = store.admit.bind(store);
+      const admissions = vi.spyOn(store, 'admit').mockImplementation(async (...args) => {
+        if (phase === 'leased') { started(); await proceed; }
+        return admit(...args);
+      });
+      const finished = vi.spyOn(store, 'finish');
+      let calls = 0;
+      const tick = () => runPurchaseMailTick(store, { mode: 'resend', from: 'store@example.invalid', apiKey: 'fixture-only' }, {
+        send: async message => {
+          calls++;
+          expect(message.to).toBe(a.mail);
+          started();
+          if (phase === 'sending') await proceed;
+          return { status: 'accepted', providerId: 'test-id' };
+        },
+      }, PUBLIC);
+      try {
+        if (phase === 'queued') await requestErasure(pool, a.id);
+        const running = tick();
+        if (phase === 'leased' || phase === 'sending') await reached;
+        if (phase === 'accepted') await running;
+        if (phase !== 'queued') await requestErasure(pool, a.id);
+        release(); await running;
+        expect(calls).toBe(['sending', 'accepted'].includes(phase) ? 1 : 0);
+        expect(await one('SELECT count(*) FROM customer_email_proof WHERE account_id=$1', [a.id])).toBe(0);
+        expect(await q('SELECT state,message,recipient,lease_id,provider_id FROM purchase_mail_delivery WHERE intent_id=$1', [intent]))
+          .toEqual([{ state: 'revoked', message: null, recipient: null, lease_id: null, provider_id: null }]);
+        if (phase === 'sending') expect(await finished.mock.results[0]!.value).toBe(false);
+        await tick();
+        expect(calls).toBe(['sending', 'accepted'].includes(phase) ? 1 : 0);
+      } finally { release(); admissions.mockRestore(); finished.mockRestore(); }
+      await age(a.id);
+      expect(await eraseAccount(pool, a.id)).toEqual({ kind: 'erased' });
+      expect((await applyVerifiedPayment(pool, event)).applied).toBe(false);
+      for (const table of ['legal_acceptance', 'purchase_mail_delivery', 'payment_intent', 'customer_email_proof', 'session'])
+        expect(await one('SELECT count(*) FROM ' + table + ' WHERE account_id=$1', [a.id])).toBe(0);
+      expect(await q('SELECT intent_id,amount_minor,plan FROM payment WHERE provider_payment_id=$1', [id]))
+        .toEqual([{ intent_id: null, amount_minor: 99000, plan: 'nobadge' }]);
+      expect(await q('SELECT email_verified_at,status FROM account WHERE id=$1', [a.id])).toEqual([{ email_verified_at: null, status: 'deleted' }]);
+    }
   });
 
   it('AC-7: после стирания — ни одной строки аккаунта в таблицах «erase» (реестр покрывает ВСЮ схему), обезличено, надгробие deleted', async () => {

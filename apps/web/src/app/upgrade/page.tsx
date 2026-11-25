@@ -7,6 +7,7 @@ import { readAccountBilling } from '@n6/db';
 import { SiteHeader } from '../SiteHeader';
 import { requestTheme } from '../theme-server';
 import { currentAccountId } from '../../server/cabinet-session';
+import { readTrustDocument } from '../../lib/trust-legal-catalog';
 import { PLAN_TITLE } from '../../server/billing-handler';
 import { getRuntime } from '../../server/runtime';
 import { UpgradeScreen } from './UpgradeScreen';
@@ -21,5 +22,5 @@ export default async function UpgradePage({ searchParams }: { searchParams: Prom
   if (!billing) redirect(`/login?next=${encodeURIComponent(`/upgrade?plan=${plan}`)}`);
   return <><SiteHeader theme={await requestTheme()} />
     <main className="center container"><UpgradeScreen plan={plan} title={PLAN_TITLE[plan]} price={formatRubles(PLAN_PRICE_MINOR[plan])}
-      paymentsOn={payments !== null} current={billing} /></main></>;
+      offerVersion={readTrustDocument('offer').version} verified={billing.email_verified} paymentsOn={payments !== null} fiscalUnavailable={!!payments && !payments.fiscal} current={billing} /></main></>;
 }

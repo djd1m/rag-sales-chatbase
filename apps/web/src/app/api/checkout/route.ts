@@ -1,4 +1,4 @@
-// POST /api/checkout { plan, idempotency_key } — оформление платного плана (tariffs-and-interest, A-N6-040).
+// POST /api/checkout { plan, idempotency_key, offer_version } — оформление платного плана (tariffs-and-interest, A-N6-040).
 import { getBillingDependencies } from '../../../server/billing-runtime';
 import { createCheckoutHandler } from '../../../server/billing-handler';
 export const runtime = 'nodejs';

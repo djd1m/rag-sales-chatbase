@@ -85,6 +85,7 @@ function httpsUrl(value: unknown, label: string): string {
 }
 
 export interface YooKassaOptions {
+  readonly fiscal?: PaymentProvider['fiscal'];
   readonly shopId: string;
   readonly secretKey: string;
   readonly testMode: boolean;
@@ -108,7 +109,7 @@ export function createYooKassaProvider(options: YooKassaOptions): PaymentProvide
       response = await fetchImpl(`${apiBase}${path}`, {
         method: init.method ?? 'GET',
         headers,
-        ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
+        ...(init.body === undefined ? {} : { body: typeof init.body === 'string' ? init.body : JSON.stringify(init.body) }),
         // Редирект от платёжного API — либо подмена, либо сбой; следовать ему нельзя.
         redirect: 'error',
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -209,30 +210,48 @@ export function createYooKassaProvider(options: YooKassaOptions): PaymentProvide
     return normalizePayment(await request(`/payments/${encodeURIComponent(id)}`), id);
   }
 
-  return Object.freeze({
-    name: 'yookassa',
-
-    async createPayment(input: CreatePaymentInput): Promise<RemotePayment> {
+  function serializePayment(input: CreatePaymentInput): string {
       verify(UUID_V4.test(input.orderId), 'orderId обязан быть каноническим UUID');
       const value = formatMinor(input.amountMinor);
       const returnUrl = httpsUrl(input.returnUrl, 'returnUrl');
       verify(input.description.length > 0 && Array.from(input.description).length <= 128, 'описание обязано быть 1–128 символов');
-      const raw = await request('/payments', {
-        method: 'POST',
-        // Ключ идемпотентности — НАШ orderId: повтор запроса не создаёт второй платёж.
-        idempotenceKey: input.orderId,
-        body: {
+    const { email, fiscal } = input.receipt;
+    verify(fiscal.payment_mode === 'full_payment', 'неподдерживаемый способ расчёта');
+    const { tax_system_code, ...item } = fiscal;
+    return JSON.stringify({
           amount: { value, currency: 'RUB' },
           capture: true,
+      receipt: {
+        customer: { email }, ...(tax_system_code ? { tax_system_code } : {}),
+        items: [{ description: input.description, quantity: '1.00', amount: { value, currency: 'RUB' }, ...item }]
+      },
           confirmation: { type: 'redirect', return_url: returnUrl },
           description: input.description,
           metadata: { order_id: input.orderId },
-        },
       });
+  }
+
+  async function attestEnvironment() {
+    const settings = await request('/me');
+    verify(settings.account_id === shopId && settings.test === testMode,
+      'настройки магазина не совпадают с настроенным окружением');
+  }
+
+  return Object.freeze({
+    name: 'yookassa', attestEnvironment,
+    serializePayment,
+    shop: `${testMode ? 'test' : 'live'}:${shopId}`,
+    fiscal: options.fiscal ?? null,
+
+    async createPayment(input: CreatePaymentInput): Promise<RemotePayment> {
+      // Credentials choose the actual store; the local test flag alone cannot
+      // prevent a live checkout. Attest the same credentials before any POST.
+      await attestEnvironment();
+      const raw = await request('/payments', { method: 'POST', idempotenceKey: input.orderId, body: input.serializedBody ?? serializePayment(input) });
       const payment = normalizePayment(raw, null);
       verify(payment.orderId === input.orderId, 'созданный платёж не привязан к нашему заказу');
       verify(payment.amountMinor === input.amountMinor, 'сумма созданного платежа не совпадает');
-      verify(payment.confirmationUrl !== null, 'созданный платёж без адреса формы оплаты');
+      if (payment.status === 'pending') verify(payment.confirmationUrl !== null, 'созданный платёж без адреса формы оплаты');
       return payment;
     },
 

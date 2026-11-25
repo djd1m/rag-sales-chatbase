@@ -1,27 +1,24 @@
-// из N5: projects/05-podcast-clips-opus/apps/web/src/app/Landing.tsx (коммит 90fe80a) — адаптировано: разметка лендинга
-// отдельно от page.tsx (там только чтение темы), тот же компонент рендерит браузерный набор прибора (R9 на настоящей
-// разметке). Порядок секций FR-LOOK-012; ОДНО поле (адрес сайта) и ОДИН основной призыв над сгибом (FR-LOOK-001, 007).
-// Форма — только разметка: маршрут /preview и его логика — фича preview-flow (FR-PREVIEW-001).
 import type { Theme } from '../lib/theme';
+import { PreviewStart } from './preview/PreviewStart';
 import { SiteHeader } from './SiteHeader';
 // arrival — строка входа по бейджу или демо-странице (FR-GROWTH-003): «Бот как на <домен> — для вашего сайта».
 export function Landing({ theme, arrival = null }: { theme: Theme; arrival?: string | null }) {
   return <><SiteHeader theme={theme} />
     <main className="landing">
       <section className="hero center" aria-labelledby="hero-title">
-        <p className="eyebrow">Бот для сайта на ваших материалах</p>
-        {arrival && <p className="notice arrival-line">{arrival}</p>}
-        <h1 id="hero-title">Отвечает клиентам ночью — и показывает, откуда взял ответ</h1>
-        <p className="intro">Вставьте адрес сайта. Мы прочитаем страницы, соберём бота и покажем его в работе — до регистрации.</p>
-        <form className="url-form" action="/preview" method="get">
-          <label htmlFor="site-url">Адрес вашего сайта</label>
-          <div className="url-row">
-            <input id="site-url" name="url" type="text" inputMode="url" autoComplete="url" spellCheck={false} required
-              placeholder="например, stomatologia-ulybka.ru" />
-            <button type="submit">Создать бота</button>
-          </div>
-          <p className="muted">Бесплатно. Регистрация — только чтобы сохранить бота.</p>
-        </form>
+        <div className="hero-copy">
+          {arrival && <p className="arrival-line muted">{arrival}</p>}
+          <h1 id="hero-title">Бот для клиентов по вашим материалам</h1>
+          <p className="intro">Укажите сайт и задайте вопрос. Вы увидите ответ и фрагмент страницы, на котором он основан.</p>
+          <PreviewStart />
+        </div>
+        <aside className="card answer-card stack" aria-labelledby="example-title">
+          <h2 id="example-title">Пример диалога</h2>
+          <p className="question">Сколько стоит чистка зубов?</p>
+          <p className="answer">Профессиональная гигиена — 4 500 ₽, приём длится около часа.</p>
+          <p className="source-plate"><span>Источник:</span> <strong>Цены на услуги</strong></p>
+          <blockquote>«Гигиена полости рта — 4 500 ₽. Длительность приёма — 60 минут».</blockquote>
+        </aside>
       </section>
       <section className="section center" aria-labelledby="how-title">
         <h2 id="how-title">Как это работает</h2>
@@ -32,15 +29,7 @@ export function Landing({ theme, arrival = null }: { theme: Theme; arrival?: str
           <li><div><h3>Установка</h3><p>Вставляете одну строку кода на сайт — бот отвечает посетителям.</p></div></li>
         </ol>
       </section>
-      <section className="section center" aria-labelledby="example-title">
-        <h2 id="example-title">Ответ всегда с источником</h2>
-        <div className="card answer-card stack" role="group" aria-label="Пример диалога с ботом">
-          <p className="question">Сколько стоит чистка зубов?</p>
-          <p className="answer">Профессиональная гигиена — 4 500 ₽, приём длится около часа.</p>
-          <p className="source-plate"><span>Источник:</span><strong>Цены на услуги</strong><span aria-hidden="true">↗</span></p>
-          <p className="muted">Пример условный. Если ответа в материалах нет, бот говорит «не знаю» и даёт ваш контакт.</p>
-        </div>
-      </section>
+
       <section className="section center" aria-labelledby="who-title">
         <h2 id="who-title">Для кого</h2>
         <ul className="plain-list">
@@ -59,7 +48,7 @@ export function Landing({ theme, arrival = null }: { theme: Theme; arrival?: str
       </section>
       <section className="section center" aria-labelledby="plans-title">
         <h2 id="plans-title">Тарифы</h2>
-        <p>Бесплатный план — с подписью «Работает на Суфлёре» в окне чата. Снять подпись можно на плане «Без бейджа».</p>
+        <p>Бесплатный план — с подписью «Работает на Суфлёре» в окне чата. Снять подпись можно на плане «Для своего сайта».</p>
         <a className="button secondary" href="/pricing">Сравнить планы</a>
       </section>
       <section className="section center faq" aria-labelledby="faq-title">

@@ -19,6 +19,11 @@ export interface PaymentsEnv {
   readonly N6_PAYMENTS_MODE?: string;
   readonly YOOKASSA_SHOP_ID?: string;
   readonly YOOKASSA_SECRET_KEY?: string;
+  readonly N6_YOOKASSA_RECEIPTS_MODE?: string;
+  readonly N6_YOOKASSA_RECEIPT_VAT_CODE?: string;
+  readonly N6_YOOKASSA_RECEIPT_PAYMENT_SUBJECT?: string;
+  readonly N6_YOOKASSA_RECEIPT_PAYMENT_MODE?: string;
+  readonly N6_YOOKASSA_RECEIPT_TAX_SYSTEM_CODE?: string;
   readonly YOOKASSA_TEST_MODE?: string;
 }
 
@@ -47,6 +52,16 @@ export function assertPaymentsEnv(env: PaymentsEnv): PaymentsMode {
 export function selectPaymentProvider(env: PaymentsEnv): PaymentProvider | null {
   const mode = assertPaymentsEnv(env);
   if (mode === 'off') return null;
-  if (mode === 'fake') return createFakePaymentProvider();
-  return createYooKassaProvider({ shopId: env.YOOKASSA_SHOP_ID as string, secretKey: env.YOOKASSA_SECRET_KEY as string, testMode: env.YOOKASSA_TEST_MODE === 'true' });
+  if (mode === 'fake') return { ...createFakePaymentProvider(), shop: 'fake:local', fiscal: { vat_code: 1, payment_mode: 'full_payment', payment_subject: 'service' } };
+  const vat = env.N6_YOOKASSA_RECEIPT_VAT_CODE ?? '';
+  const subject = env.N6_YOOKASSA_RECEIPT_PAYMENT_SUBJECT ?? '';
+  const tax = env.N6_YOOKASSA_RECEIPT_TAX_SYSTEM_CODE || undefined;
+  const valid = env.N6_YOOKASSA_RECEIPTS_MODE === 'yookassa' && /^(?:[1-9]|1[0-2])$/.test(vat)
+    && ['service', 'intellectual_activity', 'property_right'].includes(subject)
+    && env.N6_YOOKASSA_RECEIPT_PAYMENT_MODE === 'full_payment' && (tax === undefined || /^[1-6]$/.test(tax));
+  const fiscal = valid ? {
+    vat_code: Number(vat), payment_subject: subject, payment_mode: 'full_payment' as const,
+    ...(tax ? { tax_system_code: Number(tax) } : {})
+  } : null;
+  return createYooKassaProvider({ fiscal, shopId: env.YOOKASSA_SHOP_ID as string, secretKey: env.YOOKASSA_SECRET_KEY as string, testMode: env.YOOKASSA_TEST_MODE === 'true' });
 }

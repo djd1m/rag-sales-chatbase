@@ -5,11 +5,16 @@ import { loadWebConfig } from '@n6/rag';
 import { readEnvironment } from './server/environment';
 import { answerProbe } from './answer-probe';
 import { assertPaymentsEnv } from './server/payments/config';
+import { readCustomerMailSettings } from '@n6/notifications';
+import { loadCustomerSupportSettings } from './server/customer-support-settings';
 
 async function preflight(): Promise<void> {
   const config = loadWebConfig(readEnvironment());
   // Режим оплаты — ДО пробы модели: пустой/неизвестный режим или live без магазина валят старт с именем переменной.
   assertPaymentsEnv(readEnvironment());
+  // Pure configuration checks precede all probes; disabled services need no key.
+  readCustomerMailSettings(readEnvironment());
+  loadCustomerSupportSettings(readEnvironment());
   await answerProbe(config.models, config.spendLog);
 }
 preflight().catch((error: unknown) => {

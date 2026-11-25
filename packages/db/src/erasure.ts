@@ -116,6 +116,9 @@ export function requestErasure(pool: Pool, accountId: string): Promise<RequestEr
         WHERE id = ANY($1::uuid[]) AND status IN ('queued', 'running')`, [jobs]);
     }
     await tx.query(`UPDATE bot SET status = 'deleted', public_enabled = false WHERE account_id = $1 AND status <> 'deleted'`, [accountId]);
+    await tx.query(`UPDATE purchase_mail_delivery SET state='revoked',recipient=NULL,message=NULL,provider_id=NULL,lease_id=NULL,lease_until=NULL
+      WHERE account_id=$1`, [accountId]);
+    await tx.query('DELETE FROM customer_email_proof WHERE account_id=$1', [accountId]);
     await tx.query('DELETE FROM session WHERE account_id = $1', [accountId]);
     await tx.query('DELETE FROM studio_invite WHERE studio_account_id = $1 AND accepted_by IS NULL', [accountId]);
     await tx.query(INVITES_TO_ACCOUNT_EMAIL, [accountId]);
@@ -170,6 +173,7 @@ export async function eraseAccount(pool: Pool, accountId: string, now = new Date
 async function eraseAccountRowsTx(tx: PoolClient, accountId: string): Promise<boolean> {
   // Намерения оплаты — ДО блокировки аккаунта: оплата берёт намерение, затем аккаунт (тот же порядок, без цикла).
   // Принятые деньги (payment) остаются: намерение — не учёт, у платежа intent_id станет NULL (ON DELETE SET NULL).
+  await tx.query('DELETE FROM legal_acceptance WHERE account_id=$1', [accountId]);
   await tx.query('DELETE FROM payment_intent WHERE account_id = $1', [accountId]);
   const account = (await tx.query<{ status: string }>('SELECT status FROM account WHERE id = $1 FOR NO KEY UPDATE', [accountId])).rows[0];
   if (account?.status !== 'erasing') return false;
@@ -261,7 +265,7 @@ async function finalizeErasureTx(tx: PoolClient, accountId: string, now: Date): 
       "group" = CASE WHEN "group" IN ('studio', 'partner', 'seed-net', 'seed-dogfood') THEN "group"
         WHEN "group" LIKE 'seed-studio-%' THEN 'seed-studio-erased' ELSE 'seed-erased' END
     WHERE owner_account_id = $1`, [accountId]);
-  await tx.query(`UPDATE account SET status = 'deleted', email = 'deleted:' || id::text, password_hash = '', plan = 'free', plan_source = 'none',
+  await tx.query(`UPDATE account SET status = 'deleted', email_verified_at=NULL, email = 'deleted:' || id::text, password_hash = '', plan = 'free', plan_source = 'none',
     plan_paid_until = NULL, partner_code_id = NULL, came_from = NULL, signup_ip_prefix = NULL, erase_attempted_at = NULL WHERE id = $1`, [accountId]);
   await tx.query(`INSERT INTO erasure_audit (account_id, event) VALUES ($1, 'erased')`, [accountId]);
   return { kind: 'erased' };

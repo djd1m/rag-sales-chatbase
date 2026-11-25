@@ -1,0 +1,28 @@
+flowchart TB
+    Guest["Владелец в браузере"]
+    subgraph Web["web, компоненты затронутых экранов"]
+        Shell["SiteHeader и layout<br/>Интеграция общих ссылок"]
+        Start["Landing и PreviewStart<br/>Выбор источника и запуска"]
+        Intent["preview-intent<br/>Чистый разбор параметров"]
+        Preview["PreviewScreen и PreviewViews<br/>Состояние, ответ и источник"]
+        Cabinet["CabinetEmpty, BotListScreen и BotScreen<br/>Выбор своего бота и загрузка"]
+        Auth["AuthForm и safeNextPath<br/>Сессия и точный next"]
+        Context["Server-only previewClaimContext<br/>Корреляция проверенной сессии"]
+        Notice["Кабинет, уведомление<br/>Одноразовое совпадение контекста"]
+        Pricing["Pricing<br/>Цена и лимиты из runtime"]
+        Server["Текущие web API<br/>Auth, preview, sources, verify и publish"]
+    end
+    Guest --> Shell
+    Guest --> Start
+    Guest --> Pricing
+    Start -->|"Разбор состояния маршрута"| Intent
+    Start -->|"После явного ввода адреса"| Server
+    Start -->|"После 202 с идентификатором"| Preview
+    Start -->|"PDF при необходимости входа"| Auth
+    Auth -->|"Проверенный PDF-переход"| Cabinet
+    Auth -->|"Вход или регистрация"| Server
+    Server -->|"Контекст фактического ответа"| Context
+    Cabinet -->|"Контекст текущей сессии"| Context
+    Cabinet --> Notice
+    Preview -->|"Опрос и явные действия"| Server
+    Cabinet -->|"Проверка владельца и явная загрузка"| Server

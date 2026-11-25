@@ -17,6 +17,7 @@ import type { InvitePreview, PartnerCabinet, StudioCabinet } from '../../package
 import { NotPartner, PartnerScreen } from '../../apps/web/src/app/dashboard/partner/PartnerScreen';
 import { StudioScreen } from '../../apps/web/src/app/dashboard/studio/StudioScreen';
 import { InviteView, type InviteOutcome } from '../../apps/web/src/app/invite/[token]/InviteScreen';
+import { readTrustDocument } from '../../apps/web/src/lib/trust-legal-catalog';
 import { AuthForm } from '../../apps/web/src/app/login/AuthForm';
 import { SiteHeader } from '../../apps/web/src/app/SiteHeader';
 
@@ -25,6 +26,9 @@ type Theme = 'dark' | 'light';
 const CSS = readFileSync('apps/web/src/app/globals.css', 'utf8');
 const ARTIFACTS = 'tests/artifacts/partner-and-studio/browser';
 const ORIGIN = 'https://sufler.test';
+const docs = {terms:readTrustDocument('terms'),consent:readTrustDocument('consent')};
+const documents = {terms:{path:docs.terms.path,version:docs.terms.version},consent:{path:docs.consent.path,version:docs.consent.version}};
+const accepted = {terms:{accepted:true,version:docs.terms.version}, consent:{accepted:true,version:docs.consent.version}};
 const TOKEN = 'T'.repeat(43);
 const BOT = '22222222-2222-4222-8222-222222222222';
 const old = '2026-08-01T09:00:00.000Z';
@@ -62,7 +66,7 @@ const PAGES: Record<string, (theme: Theme) => ReactElement> = {
   'invite-accepted': main(inviteView({ loggedIn: true, outcome: 'accepted' })),
   'invite-expired': main(inviteView({ loggedIn: true, preview: { ...PREVIEW, state: 'expired' } })),
   'invite-limit': main(inviteView({ loggedIn: true, outcome: 'plan_limit', message: 'Предел плана free: не больше 1 бота. Смените план на странице «Тарифы» и примите приглашение снова' })),
-  register: main(createElement(AuthForm, { initialMode: 'register', next: `/invite/${TOKEN}` })),
+  register: main(createElement(AuthForm, { initialMode: 'register', documents, next: `/invite/${TOKEN}` })),
 };
 const NAMES = Object.keys(PAGES);
 const doc = (body: string, theme: Theme, script = '') => `<!doctype html><html lang="ru" data-theme="${theme}"><head><meta charset="utf-8">
@@ -78,7 +82,7 @@ const LIVE: Record<string, { kind: string; props: object }> = {
   payout: { kind: 'payout', props: { current: null } },
   transfer: { kind: 'transfer', props: { bot: STUDIO.bots[0] } },
   invite: { kind: 'invite', props: { token: TOKEN, preview: PREVIEW, loggedIn: true } },
-  register: { kind: 'register', props: { initialMode: 'register', next: `/invite/${TOKEN}` } },
+  register: { kind: 'register', props: { initialMode: 'register', documents, next: `/invite/${TOKEN}` } },
 };
 let bundle = '';
 type Api = { bodies: Record<string, unknown[]>; replies: Record<string, Array<{ status: number; body: unknown }>> };
@@ -246,13 +250,17 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) describ
     await page.getByLabel('Почта').fill('new@example.ru');
     await page.getByLabel('Пароль').fill('пароль-надёжный-1');
     await page.getByLabel('Код партнёра или студии (если есть)').fill('net-takogo');
+    expect(await page.locator('[name=terms]').isChecked()).toBe(false);
+    expect(await page.locator('[name=consent]').isChecked()).toBe(false);
+    await page.locator('[name=terms]').check();
+    await page.locator('[name=consent]').check();
     await page.getByRole('button', { name: 'Создать аккаунт' }).first().click();
     await expect.poll(() => page.locator('#auth-code-error').textContent()).toContain('Код партнёра не найден');
     expect(await page.evaluate(() => (window as Window & { __nav?: string[] }).__nav ?? [])).toEqual([]);
     await page.getByLabel('Код партнёра или студии (если есть)').fill('studio-kolos');
     await page.getByRole('button', { name: 'Создать аккаунт' }).first().click();
     await expect.poll(() => page.evaluate(() => (window as Window & { __nav?: string[] }).__nav ?? [])).toEqual([`/invite/${TOKEN}`]);
-    expect(api.bodies['/api/auth/register']).toEqual([{ email: 'new@example.ru', password: 'пароль-надёжный-1', partner_code: 'net-takogo' },
-      { email: 'new@example.ru', password: 'пароль-надёжный-1', partner_code: 'studio-kolos' }]);
+    expect(api.bodies['/api/auth/register']).toEqual([{ ...accepted, email: 'new@example.ru', password: 'пароль-надёжный-1', partner_code: 'net-takogo' },
+      { ...accepted, email: 'new@example.ru', password: 'пароль-надёжный-1', partner_code: 'studio-kolos' }]);
   }));
 });

@@ -16,6 +16,7 @@ import { createReferralHandler } from '../apps/web/src/server/referral-handler';
 import { createAcceptInviteHandler, createInviteHandler, createPartnerSummaryHandler, createPayoutDetailsHandler,
   type PartnerDependencies } from '../apps/web/src/server/partner-handler';
 import { AuthService, type AuthStore } from '../apps/web/src/server/auth';
+import { readTrustDocument } from '../apps/web/src/lib/trust-legal-catalog';
 import { createAuthHandler } from '../apps/web/src/server/auth-handler';
 
 const DAY = 86_400_000;
@@ -127,18 +128,18 @@ describe('регистрация с кодом партнёра (FR-PARTNER-001)
     auth: new AuthService(db, SECRET), publicOrigin: 'https://test.invalid', allowMutation: async () => true,
     referralCode: action === 'register' ? () => (cookie ? 'fromcookie' : null) : undefined,
   })(new Request(`https://test.invalid/api/auth/${action}`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': '192.0.2.9' },
-    body: JSON.stringify({ email: 'user@example.org', password: 'пароль-12345', ...body }) }));
+    body: JSON.stringify({ email: 'user@example.org', password: 'пароль-12345', ...(action === 'register' ? {terms:{accepted:true,version:readTrustDocument('terms').version},consent:{accepted:true,version:readTrustDocument('consent').version}} : {}), ...body }) }));
   it('неверный явный код — 422 с полем partner_code; код и cookie доходят до хранилища; вход поле кода не принимает', async () => {
     const bad = store('invalid_code');
     const r = await call('register', bad, { partner_code: ' studio7 ' }, 'yes');
     expect(r.status).toBe(422);
     expect(await r.json()).toMatchObject({ error: { code: 'invalid_partner_code', field: 'partner_code' } });
-    expect(bad.register).toHaveBeenCalledWith('user@example.org', expect.any(String), expect.any(Object), { explicit: 'studio7', cookie: 'fromcookie' });
+    expect(bad.register).toHaveBeenCalledWith('user@example.org', expect.any(String), expect.any(Object), { explicit: 'studio7', cookie: 'fromcookie' }, expect.objectContaining({terms:expect.objectContaining({digest:readTrustDocument('terms').digest}),consent:expect.objectContaining({digest:readTrustDocument('consent').digest})}));
     const ok = store('ok');
     const done = await call('register', ok, { partner_code: '' }, 'yes');
     expect(done.status).toBe(200);
     expect(done.headers.getSetCookie().some((c) => c.startsWith('__Host-n6_ref=;'))).toBe(true);
-    expect(ok.register).toHaveBeenCalledWith('user@example.org', expect.any(String), expect.any(Object), { explicit: null, cookie: 'fromcookie' });
+    expect(ok.register).toHaveBeenCalledWith('user@example.org', expect.any(String), expect.any(Object), { explicit: null, cookie: 'fromcookie' }, expect.objectContaining({terms:expect.objectContaining({digest:readTrustDocument('terms').digest}),consent:expect.objectContaining({digest:readTrustDocument('consent').digest})}));
     expect((await call('login', store('ok'), { partner_code: 'studio7' })).status).toBe(422);
   });
 });

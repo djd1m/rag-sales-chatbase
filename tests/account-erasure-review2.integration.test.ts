@@ -222,9 +222,10 @@ describe.skipIf(!databaseUrl)('удаление аккаунта: повторн
     await age(a.id);
     const result = await runIsolatedSteps([
       { name: 'уборка тома uploads', run: async () => { throw Object.assign(new Error('EACCES: permission denied, unlink'), { code: 'EACCES' }); } },
+      { name: 'письма о покупке', run: async () => { throw Error('mail unavailable'); } },
       { name: 'стирание аккаунтов', run: () => erasureTick(pool, '/tmp/n6-erasure-no-uploads', new Date(), 500, { removeUpload: async () => false, log: () => {} }) },
     ], () => {});
-    expect(result.failed).toEqual(['уборка тома uploads']);
+    expect(result.failed).toEqual(['уборка тома uploads', 'письма о покупке']);
     expect(await status(a.id)).toBe('deleted');
   });
 

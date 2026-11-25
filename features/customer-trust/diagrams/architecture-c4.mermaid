@@ -1,0 +1,26 @@
+flowchart TB
+    UI["Публичные документы, вход, оплата и поддержка"]
+    Auth["Auth и проверка сессии"]
+    Email["Подтверждение и восстановление"]
+    Legal["Реестр редакций"]
+    Billing["Биллинг и адаптер ЮKassa"]
+    Support["Допуск Libredesk"]
+    Worker["Шаг watchdog доставки"]
+    Mail["Серверный транспорт Resend"]
+    PG[("PostgreSQL")]
+    UI --> Auth
+    UI --> Email
+    UI --> Billing
+    UI --> Support
+    UI --> Legal
+    Auth --> Legal
+    Auth --> PG
+    Email --> Auth
+    Email --> PG
+    Email --> Mail
+    Billing --> Auth
+    Billing --> Legal
+    Billing --> PG
+    Support --> Auth
+    Worker --> PG
+    Worker --> Mail

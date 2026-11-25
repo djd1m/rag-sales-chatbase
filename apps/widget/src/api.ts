@@ -12,6 +12,7 @@
 import { TOKEN } from './session';
 
 export interface WidgetConfig {
+  visitor_notice?: { text: string; href: string };
   company_name: string;
   greeting: string;
   contact: string;
@@ -55,7 +56,17 @@ export function parseConfig(value: unknown): WidgetConfig | null {
   const href = safeHref(d.badge_href);
   if (d.badge_required && !href) return null;
   if (typeof d.visitor_session !== 'string' || !TOKEN.test(d.visitor_session)) return null;
-  return { company_name: company, greeting, contact, badge_required: d.badge_required, badge_href: href, visitor_session: d.visitor_session };
+  let notice: WidgetConfig['visitor_notice'];
+  if (d.visitor_notice !== undefined) {
+    if (!d.visitor_notice || typeof d.visitor_notice !== 'object') return null;
+    const value = d.visitor_notice as Record<string, unknown>;
+    const text = str(value.text, 2000), href = safeHref(value.href);
+    if (!text?.trim() || !href) return null;
+    const target = new URL(href);
+    if (target.username || target.password) return null;
+    notice = { text, href };
+  }
+  return { ...(notice ? { visitor_notice: notice } : {}), company_name: company, greeting, contact, badge_required: d.badge_required, badge_href: href, visitor_session: d.visitor_session };
 }
 
 async function withTimeout<T>(ms: number, run: (signal: AbortSignal) => Promise<T>): Promise<T> {

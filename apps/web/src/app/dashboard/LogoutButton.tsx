@@ -1,12 +1,16 @@
 'use client';
-// Выход: POST /api/auth/logout (foundation). Контурная кнопка — вторичное действие шапки.
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { publishCustomerAuthChange } from '../../lib/customer-auth-signal';
 export function LogoutButton() {
   const [busy, setBusy] = useState(false);
-  const router = useRouter();
-  return <button type="button" className="secondary" disabled={busy} onClick={async () => {
-    setBusy(true);
-    try { await fetch('/api/auth/logout', { method: 'POST' }); router.push('/'); router.refresh(); } finally { setBusy(false); }
-  }}>Выйти</button>;
+  const [failed, setFailed] = useState(false);
+  return <><button type="button" className="secondary" disabled={busy} onClick={async () => {
+    setBusy(true); setFailed(false);
+    try {
+      const response = await fetch('/api/auth/logout', { method: 'POST' });
+      if (!response.ok) throw new Error('logout failed');
+      publishCustomerAuthChange();
+      window.location.assign('/');
+    } catch { setFailed(true); } finally { setBusy(false); }
+  }}>{busy ? 'Выходим…' : 'Выйти'}</button>{failed && <span role="alert">Не удалось выйти. Попробуйте ещё раз.</span>}</>;
 }

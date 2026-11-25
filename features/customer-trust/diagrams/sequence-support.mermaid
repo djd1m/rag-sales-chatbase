@@ -1,0 +1,21 @@
+sequenceDiagram
+    actor U as Владелец
+    participant W as Суфлёр
+    participant P as PostgreSQL
+    participant L as Официальный виджет Libredesk
+    U->>W: Открыть поддержку, прочитать цель передачи
+    W-->>U: Действия по доступу и конфигурация канала
+    U->>W: Явно открыть чат, POST support/session
+    W->>P: Проверить текущую сессию и подтверждение email
+    alt Канал и сессия действуют
+        W-->>U: Ограниченный JWT для inbox Суфлёра
+        U->>L: Очистить прежнюю identity, дождаться готовности iframe
+        L-->>U: WIDGET_LOADED от ожидаемого origin
+        U->>L: Обменять JWT и открыть только текущий диалог
+        opt Logout, смена аккаунта или уход вкладки из visible
+            U->>L: Скрыть виджет и очистить локальную identity
+            U->>W: Проверить authority перед показом после focus или pageshow
+        end
+    else Отказ, тайм-аут или недоверенный сигнал
+        W-->>U: Помощь с доступом и состояние недоступности
+    end

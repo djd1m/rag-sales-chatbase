@@ -143,7 +143,17 @@ function buildPanel(root: ShadowRoot, shell: HTMLElement, config: WidgetConfig, 
   const foot = el('div', 'n6-foot');
   const slot = el('div', 'n6-slot');
   foot.appendChild(slot);
-  panel.append(head, log, warn, form, foot);
+  panel.append(head, log, warn);
+  if (config.visitor_notice) {
+    const notice = el('details', 'visitor-notice');
+    notice.appendChild(el('summary', undefined, 'Об обработке данных'));
+    notice.appendChild(el('p', undefined, config.visitor_notice.text));
+    const privacy = el('a', 'link', 'Политика обработки данных ↗');
+    privacy.href = config.visitor_notice.href;
+    privacy.target = '_blank'; privacy.rel = 'noopener noreferrer';
+    notice.appendChild(privacy); panel.appendChild(notice);
+  }
+  panel.append(form, foot);
   shell.appendChild(panel);
 
   const badge: BadgeOptions | null = config.badge_required && config.badge_href

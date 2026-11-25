@@ -8,7 +8,9 @@
 import { writeFileSync } from 'node:fs';
 import { Worker } from 'bullmq';
 import { createEmbeddingClient, loadWorkerConfig, spendRecorder } from '@n6/rag';
-import { createPool } from '@n6/db';
+import { runPurchaseMailTick } from './purchase-mail-watchdog';
+import { readCustomerMailSettings, createCustomerMailTransport } from '@n6/notifications';
+import { createPool, CustomerEmailProofStore, PurchaseMailDeliveryStore } from '@n6/db';
 import { createIndexQueue, getRedisConnection, INDEX_QUEUE, type IndexMessage } from '@n6/queue';
 import { readEnvironment } from './environment';
 import { embedProbe } from './embed-probe';
@@ -50,12 +52,18 @@ async function main(): Promise<void> {
   const worker = new Worker<IndexMessage>(INDEX_QUEUE, async (job) => runIndexJob(deps, job.data),
     { connection: getRedisConnection(config, true), concurrency: 1 });
   worker.on('error', () => console.error('Транспорт заданий индексации недоступен'));
+  const mail = readCustomerMailSettings(readEnvironment());
+  const proofs = new CustomerEmailProofStore(pool);
+  const deliveries = new PurchaseMailDeliveryStore(pool);
+  const transport = createCustomerMailTransport(mail);
   const stopWatchdog = startWatchdog(() => runIsolatedSteps([
     { name: 'задачи индексации', run: () => watchdogTick(pool, queue.enqueue) },
     { name: 'уборка тома uploads', run: () => sweepUploads(pool, config.uploadDir) },
     // Удаление аккаунтов (account-erasure): после тихого часа, ≤ 72 ч от запроса; проход под advisory-блокировкой.
     // Отдельный шаг: сбой уборки файлов не останавливает стирание и наблюдение просрочки (повторное ревью, находка 4).
     { name: 'стирание аккаунтов', run: () => erasureTick(pool, config.uploadDir) },
+    { name: 'истёкшие ссылки доступа', run: () => proofs.purgeExpired() },
+    { name: 'письма о покупке', run: () => runPurchaseMailTick(deliveries, mail, transport, config.publicOrigin) },
   ]));
   const beat = () => writeFileSync(HEARTBEAT_FILE, String(Date.now()));
   beat();

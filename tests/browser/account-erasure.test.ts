@@ -122,6 +122,12 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) describ
     expect(await page.getByRole('button', { name: 'Удалить аккаунт навсегда' }).count()).toBe(1);
     expect(await page.getByLabel('Пароль от аккаунта').getAttribute('type')).toBe('password');
   }));
+  it('local erasure receipt states the external history boundary', () => open('erased-deleted', 'dark', { width: 390, height: 844 }, async page => {
+    const text = await page.locator('main').innerText();
+    expect(text).toMatch(/локальное стирание/);
+    expect(text).toMatch(/ЮKassa.*могут сохраниться письма.*переписка/);
+    expect(await page.getByRole('link', { name: /по вопросам данных/ }).getAttribute('href')).toBe('/support');
+  }));
   it('AC-13: четыре состояния квитанции различимы; просрочка — alert; нет квитанции — вход', async () => {
     const seen = new Map<string, string>();
     for (const name of ['erased-erasing', 'erased-overdue', 'erased-deleted', 'erased-none']) await open(name, 'dark', { width: 390, height: 844 }, async page => {

@@ -1,0 +1,17 @@
+flowchart LR
+    Account["Аккаунт и сессии"]
+    Proof["Одноразовое доказательство email"]
+    Docs["Версии документов"]
+    Acceptance["Факт принятия"]
+    Intent["Намерение оплаты и снимок"]
+    Payment["Доверенный платёж"]
+    Delivery["Письмо о покупке"]
+    Inbox["Отдельный inbox Суфлёра"]
+    Account -->|Владеет| Proof
+    Account -->|Транзакция регистрации| Acceptance
+    Docs -->|Подтверждённая редакция| Acceptance
+    Docs -->|Версия оферты| Intent
+    Account -->|Действующая сессия и текущий email| Intent
+    Account -->|Действующая сессия и текущий email| Inbox
+    Intent -->|Сверка и применение| Payment
+    Payment -->|Атомарная постановка| Delivery

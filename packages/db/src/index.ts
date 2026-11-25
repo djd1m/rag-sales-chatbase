@@ -22,3 +22,5 @@ export * from './partners.js';
 export * from './commission.js';
 export * from './studio.js';
 export * from './erasure.js';
+export * from './customer-email-proof.js';
+export * from './purchase-mail-delivery.js';

@@ -10,7 +10,7 @@ export const RETURN_MAX_ATTEMPTS = 30;
 export const RETURN_DEADLINE_MS = 60_000;
 export const RETURN_FETCH_TIMEOUT_MS = 5000;
 
-export interface CheckoutSnapshot { status?: unknown; plan?: unknown; plan_paid_until?: unknown; account_plan?: unknown }
+export interface CheckoutSnapshot { status?: 'pending' | 'succeeded' | 'canceled' | 'reconciliation_required'; plan?: unknown; plan_paid_until?: unknown; account_plan?: unknown; applied_paid_until?: unknown }
 export type ReturnState =
   | { kind: 'waiting'; attempts: number }
   | { kind: 'succeeded'; plan: string; until: string | null }
@@ -18,12 +18,14 @@ export type ReturnState =
   // обещать «включён» по старой ссылке нельзя.
   | { kind: 'paid_inactive' }
   | { kind: 'failed' }
+  | { kind: 'reconciliation_required' }
   | { kind: 'unconfirmed' }
   | { kind: 'not_found' };
 
 // snapshot null — опрос не удался (сеть, 5xx): НЕ отказ оплаты. 'not_found' — сервер ответил 404 (чужое или нет такого).
-export function decideReturnState(snapshot: CheckoutSnapshot | null | 'not_found', attempts: number, elapsedMs = 0): ReturnState {
+export function decideReturnState(snapshot: (Omit<CheckoutSnapshot, 'status'> & { status?: unknown }) | null | 'not_found', attempts: number, elapsedMs = 0): ReturnState {
   if (snapshot === 'not_found') return { kind: 'not_found' };
+  if (snapshot?.status === 'reconciliation_required') return { kind: 'reconciliation_required' };
   if (snapshot && snapshot.status === 'succeeded') {
     if (snapshot.account_plan !== 'nobadge' && snapshot.account_plan !== 'studio') return { kind: 'paid_inactive' };
     return { kind: 'succeeded', plan: snapshot.account_plan, until: typeof snapshot.plan_paid_until === 'string' ? snapshot.plan_paid_until : null };
@@ -37,5 +39,6 @@ export function decideReturnState(snapshot: CheckoutSnapshot | null | 'not_found
 // + приём приглашения студии (partner-and-studio): ровно `/invite/<токен 43 символа>`, без запроса и фрагмента.
 const NEXT_ALLOWED = /^(\/upgrade\?plan=(nobadge|studio)|\/invite\/[A-Za-z0-9_-]{43})$/;
 export function safeNextPath(value: unknown): string | null {
-  return typeof value === 'string' && NEXT_ALLOWED.test(value) ? value : null;
+  if (value === '/dashboard?source=pdf') return value;
+  return typeof value === 'string' && NEXT_ALLOWED.exec(value)?.[0] === value ? value : null;
 }

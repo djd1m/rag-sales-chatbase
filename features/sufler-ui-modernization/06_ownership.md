@@ -1,0 +1,37 @@
+# Владельцы файлов и подробности передачи реализации UI
+
+Приложение к [плану Step 6](06_implementation_plan.md). Основные контракты находятся в [требованиях](01_requirements.md), [ADR-001](03_adr/001-preserve-preview-intent.md), [ADR-002](03_adr/002-evolve-existing-screens.md) и [архитектуре](05_architecture.md). Перед кодом прочитать эти документы и настоящие исходники затрагиваемых компонентов. [Квитанция K1/K2](receipts/plan-author-checks.json) содержит команды и проверенные имена.
+
+## Один писатель на файл
+
+В UI одна реализационная единица на свежем запрошенном `gpt-6.2-astra/high`. Customer-trust владеет авторизацией и связанными изменениями. Руководитель работ владеет общей оболочкой. Таблица раскрывает все 36 целей без изменения их писателей.
+
+| Задача | Писатель | Точные файлы |
+|---|---|---|
+| TASK-1 | Customer-trust | `apps/web/src/lib/payment-return.ts`, `apps/web/src/server/auth-handler.ts`, `apps/web/src/server/preview-claim-context.ts`, `tests/auth.test.ts`, `tests/billing.unit.test.ts` |
+| TASK-2 | UI | `apps/web/src/app/Landing.tsx`, `apps/web/src/app/preview/page.tsx`, `apps/web/src/app/preview/PreviewStart.tsx`, `apps/web/src/lib/preview-intent.ts`, `tests/preview-intent.test.ts` |
+| TASK-3 | UI | `apps/web/src/app/dashboard/page.tsx`, `apps/web/src/app/dashboard/CabinetEmpty.tsx`, `apps/web/src/app/dashboard/BotListScreen.tsx`, `apps/web/src/app/dashboard/CabinetViews.tsx` |
+| TASK-4 | UI | `apps/web/src/server/preview-handler.ts`, `apps/web/src/server/cabinet-session.ts`, `apps/web/src/app/dashboard/page.tsx`, `apps/web/src/app/preview/[jobId]/PreviewScreen.tsx`, `apps/web/src/lib/preview-claim-notice.ts`, `apps/web/src/app/dashboard/PreviewClaimNotice.tsx` |
+| TASK-5 | Customer-trust | `apps/web/src/app/login/AuthForm.tsx`, `apps/web/src/app/login/page.tsx` |
+| TASK-6 | UI | `apps/web/src/app/preview/[jobId]/PreviewScreen.tsx`, `apps/web/src/app/preview/PreviewViews.tsx`, `apps/web/src/app/dashboard/bots/[botId]/BotScreen.tsx`, `apps/web/src/app/dashboard/CabinetViews.tsx`, `apps/web/src/app/OwnerAnswerSource.tsx`, `tests/browser/preview-flow.test.ts`, `tests/browser/bot-cabinet.test.ts` |
+| TASK-7 | UI | `apps/web/src/app/pricing/Pricing.tsx`, `apps/web/src/app/globals.css`, `tests/theme.test.ts`, `tests/browser/design-shell.test.ts` |
+| TASK-7 | Руководитель работ | `apps/web/src/app/SiteHeader.tsx`, `apps/web/src/app/layout.tsx` |
+| TASK-8 | UI | `tests/browser/sufler-source-journey.test.ts`, `tests/fixtures/sufler-source-journey.ts`, `tests/fixtures/sufler-ui-test-transport.mjs`, `tests/preview-flow.integration.test.ts` |
+| TASK-9/10 | UI и руководитель работ | Тесты из TASK-8, наблюдение существующих маршрутов и артефакты проверки вне кодовых целей |
+
+Уникальные цели — 27 UI, 7 customer-trust и 2 для общей оболочки. `LogoutButton.tsx` и детальные recovery/email/support тесты принадлежат смежному плану. `InstallViews.tsx` и `apps/web/src/app/dashboard/bots/[botId]/install/InstallScreen.tsx` являются наблюдаемыми зависимостями U09. Новый экран или телеметрия установки требуют решения по фактическому наблюдению.
+
+## Интерфейсы между писателями
+
+- `previewClaimContext` и auth producer принадлежат customer-trust. Explicit claim producer, `currentCabinetSession` и потребитель баннера принадлежат UI. `currentAccountId` остаётся доступным прежним вызывающим. Значение заголовка `X-Sufler-Claim-Context` — base64url HMAC-SHA256 серверным секретом от `sufler-preview-claim-context-v1` + NUL + действительного токена. Потребитель сравнивает с текущей проверенной серверной сессией и однократно читает слот `n6_preview_claim_notice_v1`. Срок — две минуты. Сырой токен и digest не попадают в URL, журналы и cross-origin-экспорт. Заголовок служит корреляции UI, JSON/HTTP и источник полномочий прежние.
+- UI предоставляет `storePreviewClaimNotice` и `consumePreviewClaimNotice`, тип `PreviewClaimOutcome` и `PREVIEW_CLAIM_CONTEXT_HEADER`. `AuthForm` пишет только фактическую пару ответа, поддерживает точный `next` и показывает действительный отказ с продолжением при отказе storage. Панель в кабинете использует `PreviewClaimNotice`. URL-флаг, закладка, истечение, другая сессия и повторная история не подтверждают сохранение.
+- `preview-intent.ts` даёт `PreviewIntent`, `parsePreviewIntent` и `readPreviewSiteInput`. Валидация и сетевые эффекты остаются раздельными. UI переиспользует `PreviewStartForm` и `PreviewStart`. `OwnerAnswerSource` используется обоими чатами владельца с одним доступным активным экземпляром. Кандидаты проверены проектным K1. Новых npm/CLI имён нет. Тестовые пути сверены отдельно, K1 source adapter их не сканирует.
+- `tests/browser/design-shell.test.ts` принадлежит UI. В login fixture сохраняются email, пароль и необязательный партнёрский код. Если fixture отправляет регистрацию, берутся текущие тестовые версии `terms` и `consent` из registry, оба checkbox первоначально пусты, подтверждения передаются раздельно. Руководитель работ подключает только действующие общие ссылки. Изменения в `globals.css` координирует UI-писатель.
+
+## Детали проверок и среды
+
+- Имена тестов восьми поправок стабильны и перечислены в плане. Дополнительные браузерные тесты сохраняют семантику действующих SSR-инвариантов. В `tests/browser/preview-flow.test.ts` сохраняются раскрытая цитата, rel/HTTP(S), лимит, усечение и обе CTA. `tests/browser/bot-cabinet.test.ts` сохраняет работу сайта, PDF, текстового файла и состояний кода. `tests/theme.test.ts` адаптирует позицию демо по OpenSpec и сохраняет проверку остальных семантических разделов и ссылок.
+- Регрессии `tests/partners.unit.test.ts`, `tests/browser/partners.test.ts`, `tests/browser/gate-onboarding.test.ts`, `tests/browser/widget-embed.test.ts`, `tests/widget-config.integration.test.ts` и `tests/visitor-ask.integration.test.ts` переиспользуются без отдельной продуктовой переписи. Для именованных selectors и тестовых данных соблюдать [матрицу реальных маршрутов](05_architecture.md#verification-inputs). В отчёте раздельно фиксировать реальные GET/access/claim, внедрённые сетевые отказы и синтетическую модель.
+- Запуск Chromium только в существующем `sufler-ui-audit-browser-1`. Контроллер использует версию Playwright этого контура и проверенный мост к тестовому origin. Исходники read-only, данные и временные файлы вне репозитория. `scripts/check-responsive.sh` создаёт другой Docker-контейнер и не используется для запуска Chromium этой проверки. Если WebKit или другой прежний движок недоступен, зафиксировать границу прогона и сохранить набор. Не устанавливать новый движок. Ресурсы 2 CPU/4 GB и около 6,5 GB свободного диска не делить между тяжёлыми сборками и двумя QC-стендами одновременно.
+- Для U09 использовать изолированный настоящий Next, PostgreSQL, собранный widget bundle и отдельный разрешённый origin. Тестовый Node preload даёт synthetic transport только в изолированном процессе, при необходимости для startup probe. Egress к платным сервисам закрыт. Настоящий тег берётся из видимого install route. Зафиксировать copy, config, открытие виджета, CSP/CORS и след реального `first_answer` в проверенном origin, если он получен. `bundle_missing` отдельно наблюдается существующей оснасткой. Вывод о работе production не делается. Перед приёмкой нужен фактический результат и отдельное решение по U09.
+- Тарифная приёмка сохраняет runtime потолки и 30 дней без автопродления. Пять пользовательских сессий понимания условий и предложенный ориентир 4 из 5 остаются отдельным исследованием. Браузерное прохождение не подтверждает этот результат.

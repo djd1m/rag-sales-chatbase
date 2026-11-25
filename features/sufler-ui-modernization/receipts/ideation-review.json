@@ -1,0 +1,273 @@
+{
+  "schema": "fa-review-convergence-1",
+  "phase": "ideation",
+  "nonce": "84ae26d4-a275-4d3d-a7e2-1ac8b043f650",
+  "revision": "80a4f87548dad351fc9a7b1bb6e7c3e95a37c545e3a0da9e4465299d8b070d03",
+  "author": {
+    "addressed": [
+      "Q-01",
+      "Q-02",
+      "Q-03",
+      "Q-04",
+      "UI-T01",
+      "UI-T02",
+      "UI-RISK-01",
+      "UI-RISK-02"
+    ],
+    "changedScope": [
+      "features/sufler-ui-modernization/01_requirements.md",
+      "features/sufler-ui-modernization/03_adr/001-preserve-preview-intent.md",
+      "features/sufler-ui-modernization/03_adr/002-evolve-existing-screens.md",
+      "features/sufler-ui-modernization/03_shift_left.md",
+      "features/sufler-ui-modernization/04_domain_model.md",
+      "features/sufler-ui-modernization/05_architecture.md",
+      "features/sufler-ui-modernization/diagrams/domain-model.mermaid",
+      "features/sufler-ui-modernization/diagrams/architecture-c4.mermaid",
+      "features/sufler-ui-modernization/diagrams/sequence-happy.mermaid",
+      "features/sufler-ui-modernization/diagrams/sequence-error.mermaid",
+      "features/sufler-ui-modernization/diagrams/sequence-claim.mermaid",
+      "openspec/changes/sufler-ui-modernization/design.md",
+      "openspec/changes/sufler-ui-modernization/specs/sufler/onboarding/spec.md",
+      "openspec/changes/sufler-ui-modernization/specs/sufler/preview-workspace/spec.md",
+      "apps/web/src/app/Landing.tsx",
+      "apps/web/src/app/login/AuthForm.tsx",
+      "apps/web/src/app/dashboard/page.tsx",
+      "apps/web/src/app/dashboard/CabinetViews.tsx",
+      "apps/web/src/app/preview/PreviewStart.tsx",
+      "apps/web/src/app/preview/PreviewViews.tsx",
+      "apps/web/src/app/preview/[jobId]/PreviewScreen.tsx",
+      "apps/web/src/lib/payment-return.ts",
+      "apps/web/src/server/auth-handler.ts",
+      "apps/web/src/server/preview-handler.ts",
+      "apps/web/src/server/cabinet-session.ts",
+      "tests/preview-flow.integration.test.ts",
+      "tests/browser/widget-harness.ts"
+    ],
+    "classification": "structural",
+    "delta": "Уточнены отдельное восстановление GET того же jobId при 503 и done/site:null, раскрытая первая цитата в обоих чатах владельца, ветки первого unknown, результат claim по фактическому ответу и действительной сессии, безопасное хранение адреса и реальный наблюдаемый стендовый сценарий U09. Добавлены route-level контрольные данные и контракты OpenSpec. Публичные JSON и HTTP-статусы auth/claim сохраняются, для корреляции UI предложен узкий same-origin заголовок.",
+    "evidence": "В ADR-001, ADR-002, архитектуре, требованиях, shift-left и OpenSpec каждое условие связано с конкретным переходом или наблюдаемым тестом. 03.5-author-delta.md содержит карту восьми IDs. Изменения относятся к проекту, исполнение продуктовых тестов и стенд U09 не заявлены.",
+    "newRisks": {
+      "assessment": "Новые зависимости проекта — доступность хранилища вкладки, согласованное внедрение заголовка и локальный синтетический транспорт. Они включены в существующие условия UI-RISK-01, UI-RISK-02 и UI-T02. Дополнительных открытых условий автор не выявил.",
+      "evidence": "ADR-001 ограничивает same-origin контекст до двух минут, потребляет его однократно и сохраняет видимость отказа при блокировке storage. Безопасный корневой адрес реализует совместимый повтор; неспособный безопасно сохраняться адрес доступен через ручной ввод. 05 разделяет настоящие маршруты, synthetic модель и внешние события и запрещает реальный egress для U09.",
+      "conditions": []
+    }
+  },
+  "reviews": [
+    {
+      "reviewer": "qcsd-testability",
+      "family": "codex",
+      "independent": true,
+      "verdict": "clean",
+      "conditions": [
+        {
+          "id": "UI-T01",
+          "owner": "qcsd-testability",
+          "severity": "HIGH",
+          "classification": "structural",
+          "requirement": "Specify route-level fixtures and observable assertions for real done/site, null site, transient polling recovery and 404, claim outcomes and no server verification from local marks.",
+          "scope": [
+            "features/sufler-ui-modernization/05_architecture.md",
+            "features/sufler-ui-modernization/03_adr/002-evolve-existing-screens.md"
+          ],
+          "evidence": "ADR names not-yet-existing sufler-source-journey browser test; existing component fixtures do not establish the actual route and done contract; preview-flow integration demonstrates done with populated site."
+        },
+        {
+          "id": "UI-T02",
+          "owner": "qcsd-testability",
+          "severity": "HIGH",
+          "classification": "structural",
+          "requirement": "Define reproducible populated U09 test bot, authorized external origin, evidence and ownership; distinguish synthetic checks from the mandatory actual filled-screen and installation observation before acceptance.",
+          "scope": [
+            "features/sufler-ui-modernization/01_requirements.md",
+            "features/sufler-ui-modernization/05_architecture.md"
+          ],
+          "evidence": "FR-9 requires populated test-bot research; research and architecture acknowledge it has not yet been observed and do not define its reproducible setup."
+        }
+      ],
+      "verifications": [
+        {
+          "id": "UI-T01",
+          "revision": "80a4f87548dad351fc9a7b1bb6e7c3e95a37c545e3a0da9e4465299d8b070d03",
+          "classification": "structural",
+          "evidence": "05_architecture route fixture specifies actual Next/PostgreSQL, session cookies, populated done/site, substituted null/503, GET recovery, 404, claim outcomes and no implicit verify; ADR-001/002 and OpenSpec align.",
+          "implementationVerified": true
+        },
+        {
+          "id": "UI-T02",
+          "revision": "80a4f87548dad351fc9a7b1bb6e7c3e95a37c545e3a0da9e4465299d8b070d03",
+          "classification": "structural",
+          "evidence": "05_architecture U09 specifies seeded populated installation, real widget bundle and controlled external origin, observed server events, identified owner and evidence, separating synthetic model and future actual observation.",
+          "implementationVerified": true
+        }
+      ],
+      "newRisks": {
+        "assessment": "No additional serious conditions identified after focused design review",
+        "evidence": "Reviewed author assessment and changed design, diagrams, OpenSpec and affected dependencies; fake/provider limits and future acceptance remain explicit in 03.5-testability.md.",
+        "conditions": []
+      },
+      "authorAssessmentChecked": true,
+      "deltaVerification": {
+        "classification": "structural",
+        "evidence": "Independently checked changed requirements, ADRs, domain and architecture, diagrams, relevant OpenSpec and author delta against current snapshot; the documented acceptance and local-test constraints are design evidence, not executed tests.",
+        "implementationVerified": true
+      }
+    },
+    {
+      "reviewer": "qcsd-quality",
+      "family": "codex",
+      "independent": true,
+      "verdict": "clean",
+      "conditions": [
+        {
+          "id": "Q-01",
+          "owner": "qcsd-quality",
+          "severity": "HIGH",
+          "classification": "structural",
+          "requirement": "FR-6: отдельно задать видимый выход из done с site:null и из недоступности первого GET; повтор читает статус существующей задачи, сохраняет jobId, не делает POST создания/ask и не выдаёт эти состояния за активное чтение.",
+          "scope": [
+            "features/sufler-ui-modernization/05_architecture.md",
+            "features/sufler-ui-modernization/03_adr/002-evolve-existing-screens.md"
+          ],
+          "evidence": "GET разрешает nullable site (preview-handler.ts:41,151); PreviewScreen.tsx прекращает опрос при done и для !view.site возвращает PreviewProgress, для первого отказа остаётся на заглушке загрузки. Таблица состояний проекта называет только готовность с сайтом и временный отказ."
+        },
+        {
+          "id": "Q-02",
+          "owner": "qcsd-quality",
+          "severity": "HIGH",
+          "classification": "structural",
+          "requirement": "FR-7 и действующие FR-WIDGET-004/FR-BOT-001: первый answered в обоих чатах владельца сразу показывает текст подтверждённой цитаты без второго действия; на широком и узком экранах сохраняются связь с сообщением, доступная смена источника и черновик, widget не затронут.",
+          "scope": [
+            "features/sufler-ui-modernization/01_requirements.md",
+            "features/sufler-ui-modernization/03_adr/002-evolve-existing-screens.md",
+            "features/sufler-ui-modernization/05_architecture.md"
+          ],
+          "evidence": "Specification.md:234,256 и открытые details в PreviewViews.tsx и CabinetViews.tsx уже дают владельцу раскрытую цитату. В ADR-002 выбор начинается с явного действия у ответа; FR-7 и Confirmation проверяют только результат открытия. Текст цитаты мог бы исчезнуть по умолчанию при положительных тестах."
+        },
+        {
+          "id": "Q-03",
+          "owner": "qcsd-quality",
+          "severity": "HIGH",
+          "classification": "structural",
+          "requirement": "FR-2/3: при возврате после auth/claim подтвердить именно исход сохранения. Баннер не приравнивает сохранение черновика к готовности материалов, включённым ответам, выдаче кода или установке. Прямой/устаревший URL с saved без соответствующего исхода не сообщает об успешном сохранении. PDF продолжает к явно выбранному своему боту.",
+          "scope": [
+            "features/sufler-ui-modernization/03_adr/001-preserve-preview-intent.md",
+            "features/sufler-ui-modernization/05_architecture.md"
+          ],
+          "evidence": "dashboard/page.tsx выводит по query.saved=1 текст «сохранён в ваш аккаунт и включён» и совет забирать код. Auth допускает claim после robots_disallowed/no_text и возвращает статус без bot_id. Даже один бот в списке не доказывает событие claim. ADR-001 не задаёт границу доказательства уведомления."
+        },
+        {
+          "id": "Q-04",
+          "owner": "qcsd-quality",
+          "severity": "WARNING",
+          "classification": "structural",
+          "requirement": "FR-7: задать выполнимый путь при первом unknown без контакта отдельно для несохранённого предпросмотра и своего бота. Из кабинета пользователь достигает настроек своего бота, в предпросмотре видит корректный следующий шаг для своей сессии; отсутствие first_answer не приводит к показу заработанного CTA или к фоновой мутации.",
+          "scope": [
+            "features/sufler-ui-modernization/03_adr/002-evolve-existing-screens.md",
+            "features/sufler-ui-modernization/05_architecture.md"
+          ],
+          "evidence": "Оба сервера возвращают contact для unknown. Текущие ChatMessage/OwnerMessage отбрасывают contact. При отсутствии первого answered в публичном чате нет области CTA, а архитектура упоминает только доступную серверную информацию. Действующего маршрута к настройкам для первого unknown в проекте не указано."
+        }
+      ],
+      "verifications": [
+        {
+          "id": "Q-01",
+          "revision": "80a4f87548dad351fc9a7b1bb6e7c3e95a37c545e3a0da9e4465299d8b070d03",
+          "classification": "structural",
+          "evidence": "ADR-002, строки 48 и 99, 05_architecture.md:75 и 03_shift_left.md:38 задают первый 503, повторный отказ, восстановление GET и отдельный готовый done/site:null. Заявлены видимое продолжение с тем же jobId, отсутствие создания/ask и прекращение фонового опроса при терминальном результате.",
+          "implementationVerified": true
+        },
+        {
+          "id": "Q-02",
+          "revision": "80a4f87548dad351fc9a7b1bb6e7c3e95a37c545e3a0da9e4465299d8b070d03",
+          "classification": "structural",
+          "evidence": "ADR-002:50,100 требует автоматически показать первую цитату в обоих чатах; выбранный прежний фрагмент доступен клавиатурой, при смене раскладки сохраняются история, черновик и одна интерактивная панель. openspec preview-workspace/spec.md:35 закрепляет начальное раскрытие для владельца.",
+          "implementationVerified": true
+        },
+        {
+          "id": "Q-03",
+          "revision": "80a4f87548dad351fc9a7b1bb6e7c3e95a37c545e3a0da9e4465299d8b070d03",
+          "classification": "structural",
+          "evidence": "ADR-001:52–56 сопоставляет ответ текущего auth/claim с проверенной серверной сессией, потребляет короткий слот, игнорирует URL-флаги и регламентирует видимый отказ при недоступности хранения. Сообщение claimed удостоверяет только сохранение, выбор PDF идёт по списку своего аккаунта. OpenSpec design.md:14 и identity/email-access/spec.md:45 в соседнем изменении согласуют границу.",
+          "implementationVerified": true
+        },
+        {
+          "id": "Q-04",
+          "revision": "80a4f87548dad351fc9a7b1bb6e7c3e95a37c545e3a0da9e4465299d8b070d03",
+          "classification": "structural",
+          "evidence": "01_requirements.md:53 и ADR-002:52,101 определяют именно первый unknown: реальный контакт либо настройки своего бота, явный claim черновика вошедшего или действующий вход гостя. Preview-workspace/spec.md:52–55 фиксирует отсутствие автоматической мутации и прежний порог first_answer.",
+          "implementationVerified": true
+        }
+      ],
+      "newRisks": {
+        "assessment": "Дополнительных условий после focused review не выявлено. Остаточные ограничения обозначены в проекте.",
+        "evidence": "Перепроверены отказ хранилища, короткоживущий контекст сессии, ручной ввод адреса с путём и подменённый транспорт модели. ADR-001:54,62–64 и 05:75–90 дают наблюдаемые отрицательные сценарии. Готовность установки по U09 требует будущего наблюдения, исходы виджета нельзя вывести из копирования тега.",
+        "conditions": []
+      },
+      "authorAssessmentChecked": true,
+      "deltaVerification": {
+        "classification": "structural",
+        "evidence": "Проверены измеренные 01, ADR-001/002, 04, 05, изменения shift-left и схемы последовательностей, design и два изменённых OpenSpec. Сопоставлены существующие Landing/PreviewStart, экран опроса, кабинет, auth/claim, сеанс и тестовые оснастки из changedScope. Хранилище, переход на GET восстановления, передача заголовка и обязанности двух потоков меняют поведение и приёмку. Все девять требований прослеживаются до своих экранов или наблюдения U09.",
+        "implementationVerified": true
+      }
+    },
+    {
+      "reviewer": "qcsd-risk",
+      "family": "codex",
+      "independent": true,
+      "verdict": "clean",
+      "conditions": [
+        {
+          "id": "UI-RISK-01",
+          "owner": "qcsd-risk",
+          "severity": "HIGH",
+          "classification": "structural",
+          "requirement": "FR-2/FR-4. Источник сообщения об исходе claim должен быть связан с действительным ответом авторизации/claim и текущим аккаунтом. Прямой URL, закладка и повтор после смены аккаунта не показывают утверждение об успешном сохранении или включении. Ошибка claim остаётся видимой, выбор PDF сохраняется, автоматического создания бота нет. Указать способ передачи и именованный отрицательный тест.",
+          "scope": [
+            "features/sufler-ui-modernization/03_adr/001-preserve-preview-intent.md",
+            "features/sufler-ui-modernization/05_architecture.md"
+          ],
+          "evidence": "ADR-001 передаёт saved/preview через адрес. AuthForm.tsx:36 превращает исход в query, dashboard/page.tsx:10,17 выбирает утверждение «сохранён … и включён» по входному saved=1. Список ботов подтверждает владение, но не факт конкретной операции или проверку ответов."
+        },
+        {
+          "id": "UI-RISK-02",
+          "owner": "qcsd-risk",
+          "severity": "HIGH",
+          "classification": "structural",
+          "requirement": "FR-6/NFR-3. Определить, какие данные URL допускаются в ключах и значениях sessionStorage и в URL перехода. До любой записи или построения ссылки исключить userinfo и произвольные потенциально секретные path/query/fragment из сохраняемого контекста, для непредставимого безопасно адреса предусмотреть явный ручной ввод. Применить правило к прежнему ключу идемпотентности и прямому legacy-входу, сохранить один запуск при повторе безопасного адреса. Указать срок/очистку и отрицательный тест ключей и значений на синтетических маркерах.",
+          "scope": [
+            "features/sufler-ui-modernization/03_adr/001-preserve-preview-intent.md",
+            "features/sufler-ui-modernization/05_architecture.md"
+          ],
+          "evidence": "PreviewStart.tsx:9–16 кладёт сырой URL прямо в имя ключа ещё до ответа сервера и не задаёт TTL. ADR-001 ограничивает userinfo у стандартной формы и срок нового контекста, но 05 оставляет прежний механизм, а путь/параметры HTTP(S)-адреса могут содержать токен или персональные данные."
+        }
+      ],
+      "verifications": [
+        {
+          "id": "UI-RISK-01",
+          "revision": "80a4f87548dad351fc9a7b1bb6e7c3e95a37c545e3a0da9e4465299d8b070d03",
+          "classification": "structural",
+          "evidence": "ADR-001 § Одноразовый контекст и 05, строки 39, 55, 77. Только действительный ответ auth/explicit claim в текущей сессии заполняет слот исхода. Защищённый кабинет проверяет совпадение HMAC текущей сессии, TTL 2 минуты и удаляет слот до показа. Заголовок служит корреляции UI; он не участвует в авторизации. Указаны прямой saved URL, смена аккаунта, просрочка, блокировка хранилища и различение готовности и claim. При отказе передачи ошибку сохраняют в форме, PDF и список доступны без создания.",
+          "implementationVerified": true
+        },
+        {
+          "id": "UI-RISK-02",
+          "revision": "80a4f87548dad351fc9a7b1bb6e7c3e95a37c545e3a0da9e4465299d8b070d03",
+          "classification": "structural",
+          "evidence": "ADR-001 §§ Запуск и возврат, 05, строки 37–38,79 и SL-1.2. Новые формы используют POST; userinfo отклоняется до любых записей. Только корневой origin, ограниченные jobId/UUID и digest допускаются в новые хранилища. Есть TTL 24 ч, максимум восемь записей каждого типа, очистка старого сырого префикса, однократная миграция только соответствующего безопасного UUID. У сложного адреса ключ в памяти; после перехода нужен ручной ввод. Legacy одноразово читает входящий url и очищает историю; режимы PDF/retry не запускают его. Маркеры проверяются одновременно в ключах, значениях, новых ссылках и диагностике.",
+          "implementationVerified": true
+        }
+      ],
+      "newRisks": {
+        "assessment": "Дополнительных серьёзных условий после проверки дельты не выявлено.",
+        "evidence": "Учтены ограничения передачи между вкладками, отсутствие storage и первоначальный GET уже существующей ссылки. У исхода claim нет полномочий на смену серверного состояния; действительный результат операции и состояние бота проверяются отдельно. Упомянутые ограничения отражены сценариями автора. Новых условий не выявлено.",
+        "conditions": []
+      },
+      "authorAssessmentChecked": true,
+      "deltaVerification": {
+        "classification": "structural",
+        "evidence": "Сверены две ADR, FR-2/4/6/7, 04, 05, shift-left, контракты onboarding/preview-workspace и схемы переходов. На границах подтверждены актуальная сессия и реальный auth/claim, строгий next, реальный SQL для владения и явное действие на загрузку PDF. Архитектура различает первый GET после отказа и запуск, экранный checklist и серверный verify, синтетическую модель и наблюдение U09.",
+        "implementationVerified": true
+      }
+    }
+  ]
+}

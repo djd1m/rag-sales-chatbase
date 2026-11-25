@@ -1,0 +1,135 @@
+{
+  "scope": "sufler-ui-modernization",
+  "phase": "step-6-plan-author",
+  "date": "2026-11-25",
+  "upstreamDz": {
+    "command": "tools/feature-process/run dz name-check --module preview-intent --export parsePreviewIntent --json",
+    "exit": 2,
+    "outcome": "not-established",
+    "reason": "the workspace could not be scanned, so no name was checked — this is not a clean bill"
+  },
+  "projectK1": {
+    "command": "tools/feature-process/run k1 --module preview-intent,preview-claim-notice,PreviewClaimNotice,OwnerAnswerSource,preview-claim-context --export PreviewIntent,parsePreviewIntent,readPreviewSiteInput,PreviewClaimOutcome,PREVIEW_CLAIM_CONTEXT_HEADER,storePreviewClaimNotice,consumePreviewClaimNotice,PreviewClaimNotice,OwnerAnswerSource,previewClaimContext,currentCabinetSession",
+    "exit": 0,
+    "result": {
+      "checker": "sufler-workspace-source",
+      "status": "pass",
+      "scanned": {
+        "manifests": 7,
+        "sources": 221
+      },
+      "checks": [
+        {
+          "kind": "module",
+          "name": "preview-intent"
+        },
+        {
+          "kind": "module",
+          "name": "preview-claim-notice"
+        },
+        {
+          "kind": "module",
+          "name": "PreviewClaimNotice"
+        },
+        {
+          "kind": "module",
+          "name": "OwnerAnswerSource"
+        },
+        {
+          "kind": "module",
+          "name": "preview-claim-context"
+        },
+        {
+          "kind": "export",
+          "name": "PreviewIntent"
+        },
+        {
+          "kind": "export",
+          "name": "parsePreviewIntent"
+        },
+        {
+          "kind": "export",
+          "name": "readPreviewSiteInput"
+        },
+        {
+          "kind": "export",
+          "name": "PreviewClaimOutcome"
+        },
+        {
+          "kind": "export",
+          "name": "PREVIEW_CLAIM_CONTEXT_HEADER"
+        },
+        {
+          "kind": "export",
+          "name": "storePreviewClaimNotice"
+        },
+        {
+          "kind": "export",
+          "name": "consumePreviewClaimNotice"
+        },
+        {
+          "kind": "export",
+          "name": "PreviewClaimNotice"
+        },
+        {
+          "kind": "export",
+          "name": "OwnerAnswerSource"
+        },
+        {
+          "kind": "export",
+          "name": "previewClaimContext"
+        },
+        {
+          "kind": "export",
+          "name": "currentCabinetSession"
+        }
+      ],
+      "collisions": []
+    }
+  },
+  "originalK2": {
+    "command": "tools/feature-process/node_modules/.bin/node tools/feature-process/node_modules/@dzhechkov/skills-feature-adr/templates/.claude/skills/feature-adr/scripts/check-plan-completeness.mjs features/sufler-ui-modernization --tier=L --require-requirements",
+    "note": "Installed upstream package template, untouched by the project adaptation. Compared against the same literal final plan.",
+    "exit": 1,
+    "output": [
+      "NOTE  C9: twin scan over 34 target(s), 25 on disk, 0 unlisted twins (byte-identical only; drifted copies need identity tests)",
+      "NOTE  C8: all 19 requirement ids referenced",
+      "FAIL  C3: target line rejected: \"apps/web/src/app/preview/[jobId]/PreviewScreen.tsx\" — markdown residue",
+      "FAIL  C3: target line rejected: \"apps/web/src/app/dashboard/bots/[botId]/BotScreen.tsx\" — markdown residue",
+      "K2 plan-completeness: FAIL (2 failure(s), 0 warning(s), 0 skip(s)) over 2 ADRs, tier L, in /home/rag-sales-chatbase/features/sufler-ui-modernization"
+    ]
+  },
+  "adaptedK2": {
+    "command": "tools/feature-process/run k2 features/sufler-ui-modernization --tier=L",
+    "exit": 0,
+    "output": [
+      "NOTE  C9: twin scan over 36 target(s), 27 on disk, 0 unlisted twins (byte-identical only; drifted copies need identity tests)",
+      "NOTE  C8: all 19 requirement ids referenced",
+      "K2 plan-completeness: PASS (0 failure(s), 0 warning(s), 0 skip(s)) over 2 ADRs, tier L, in /home/rag-sales-chatbase/features/sufler-ui-modernization"
+    ]
+  },
+  "openSpec": {
+    "validateCommand": "tools/feature-process/run openspec validate sufler-ui-modernization --type change --strict --json",
+    "validateExit": 0,
+    "statusCommand": "tools/feature-process/run openspec status --change sufler-ui-modernization --json",
+    "statusExit": 0,
+    "valid": true,
+    "issues": [],
+    "isPlanningComplete": true
+  },
+  "compactContext": {
+    "command": "tools/feature-process/node_modules/.bin/node .claude/skills/feature-adr/scripts/build-coder-context.mjs features/sufler-ui-modernization --tier=L",
+    "exit": 0,
+    "status": "complete",
+    "planBytesBefore": 47642,
+    "planBytes": 22618,
+    "promptBytes": 82664,
+    "limitBytes": 98304,
+    "digest": "8c1fd6ed56c62f365ec081aa22dfb8dec90ab400f475fe8094b391ca04daec79",
+    "diagnostics": [],
+    "codeTargets": 36,
+    "k2ExitAfterCompression": 0,
+    "openSpecStrictExitAfterCompression": 0,
+    "frozenIdeationSourcesUnchanged": true
+  }
+}

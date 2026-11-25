@@ -1,0 +1,29 @@
+sequenceDiagram
+    actor Owner as Владелец сайта
+    participant UI as Landing и PreviewStart
+    participant View as PreviewScreen
+    participant API as Действующий web API
+    participant DB as Postgres
+    participant Worker as Worker через BullMQ
+    Owner->>UI: Подтвердить адрес сайта
+    UI->>API: POST /api/preview, URL только в теле и UUID в заголовке
+    API->>DB: Проверить квоту, создать черновик и задачу или найти повтор
+    opt Новая задача
+        API->>Worker: Поставить задачу через BullMQ
+    end
+    API-->>UI: 202 и index_job_id
+    UI->>UI: После 202 сохранить только безопасный корневой origin задачи
+    UI->>View: Открыть /preview/[jobId]
+    par Выполнение задачи
+        Worker->>DB: Записать прогресс и итог задачи
+    and Показ статуса
+        loop Пока задача активна
+            View->>API: GET /api/preview/[id]
+            API->>DB: Прочитать статус по сессии и задаче
+            API-->>View: Подтверждённый статус и счётчики
+        end
+    end
+    Owner->>View: Явно задать вопрос
+    View->>API: POST /api/preview/[id]/ask
+    API-->>View: answered, source, first_answer или иной штатный исход
+    View-->>Owner: Ответ и раскрытая серверная цитата для первого answered

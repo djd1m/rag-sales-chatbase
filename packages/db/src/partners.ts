@@ -111,6 +111,9 @@ async function isSelfReferral(tx: PoolClient, ownerAccountId: string, accountId:
 
 export interface RegistrationInput {
   email: string; passwordHash: string;
+  // The public signup handler supplies both server editions. Internal provisioning of
+  // legacy accounts does not assert an acceptance the owner never submitted.
+  acceptance?: { terms: { version: string; digest: string }; consent: { version: string; digest: string } };
   session: { hash: string; ipPrefix: string; expiresAt: Date };
   // explicit — код из поля формы; cookie — код из подписанной cookie /r/{code} (подпись проверил web).
   partner?: { explicit: string | null; cookie: string | null };
@@ -133,6 +136,11 @@ export async function registerAccount(pool: Pool, input: RegistrationInput): Pro
       if (!account) return 'ok' as const;
       await tx.query(`INSERT INTO session (account_id, token_hash, ip_prefix, expires_at) VALUES ($1, $2, $3::cidr, $4)`,
         [account.id, input.session.hash, input.session.ipPrefix, input.session.expiresAt]);
+      if (input.acceptance) {
+        const { terms, consent } = input.acceptance;
+        await tx.query(`INSERT INTO legal_acceptance(account_id,kind,version,digest)
+          VALUES ($1,'terms',$2,$3),($1,'consent',$4,$5)`, [account.id,terms.version,terms.digest,consent.version,consent.digest]);
+      }
       const code = explicit ?? input.partner?.cookie ?? null;
       if (code !== null) {
         const outcome = await applyPartnerCodeTx(tx, { accountId: account.id, code, source: explicit !== null ? 'code' : 'cookie', ipPrefix: input.session.ipPrefix });

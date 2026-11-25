@@ -4,7 +4,8 @@
 // и 20 одновременных доставок), перестановка; security-operation-order: недоступность ЮKassa → 503 без записи → повтор
 // проходит полным путём; SC-US-011-1/2.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { randomBytes } from 'node:crypto';
+import { readTrustDocument } from '../apps/web/src/lib/trust-legal-catalog';
+import { createHash, randomBytes } from 'node:crypto';
 import { createPool, expirePaidPlans, setPlanByOperator, type Pool } from '../packages/db/src/index';
 import { migrate } from '../packages/db/src/migrate';
 import { createBillingDependencies } from '../apps/web/src/server/billing-deps';
@@ -38,9 +39,13 @@ describe.skipIf(!databaseUrl)('оплата ЮKassa и интерес на на�
   }, 60_000);
   afterAll(async () => { await yk?.close(); if (pool) { await pool.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`); await pool.end(); } });
 
-  const yookassa = () => createYooKassaProvider({ shopId: SHOP_ID, secretKey: SECRET, testMode: true, apiBase: yk.apiBase });
+  const tokenHash = (token: string) => createHash('sha256').update(token).digest('hex');
+  const fiscal = { payment_mode: 'full_payment' as const, vat_code: 1, payment_subject: 'service' };
+  const offerVersion = readTrustDocument('offer').version;
+  const yookassa = () => createYooKassaProvider({ fiscal, shopId: SHOP_ID, secretKey: SECRET, testMode: true, apiBase: yk.apiBase });
   function wire(provider: PaymentProvider | null = yookassa()) {
-    const deps = createBillingDependencies({ pool, publicOrigin: PUBLIC, provider, allowMutation: async () => true,
+    const deps = createBillingDependencies({
+      pool, publicOrigin: PUBLIC, provider, tokenHash, allowMutation: async () => true,
       authenticate: async (token) => (sessions.has(token) ? { account_id: sessions.get(token)! } : null), log: () => {} });
     const call = async (handler: (r: Request) => Promise<Response>, url: string, init: RequestInit) => {
       const r = await handler(new Request(url, init));
@@ -48,8 +53,10 @@ describe.skipIf(!databaseUrl)('оплата ЮKassa и интерес на на�
     };
     return {
       deps,
-      checkout: (token: string, payload: unknown) => call(createCheckoutHandler(deps), `${PUBLIC}/api/checkout`, { method: 'POST',
-        headers: { origin: PUBLIC, cookie: `__Host-n6_session=${token}`, 'content-type': 'application/json', 'x-forwarded-for': '198.51.100.7' }, body: JSON.stringify(payload) }),
+      checkout: (token: string, payload: Record<string, unknown>) => call(createCheckoutHandler(deps), `${PUBLIC}/api/checkout`, {
+        method: 'POST',
+        headers: { origin: PUBLIC, cookie: `__Host-n6_session=${token}`, 'content-type': 'application/json', 'x-forwarded-for': '198.51.100.7' }, body: JSON.stringify({ offer_version: offerVersion, ...payload })
+      }),
       interest: (token: string, payload: unknown) => call(createInterestHandler(deps), `${PUBLIC}/api/interest`, { method: 'POST',
         headers: { origin: PUBLIC, cookie: `__Host-n6_session=${token}`, 'content-type': 'application/json', 'x-forwarded-for': '198.51.100.7' }, body: JSON.stringify(payload) }),
       status: async (token: string, intent: string) => {
@@ -64,6 +71,8 @@ describe.skipIf(!databaseUrl)('оплата ЮKassa и интерес на на�
     const id = (await pool.query<{ id: string }>(`INSERT INTO account (email, password_hash, plan) VALUES ($1, 'x', $2) RETURNING id`,
       [`b${randomBytes(6).toString('hex')}@example.ru`, plan])).rows[0]!.id;
     const token = randomBytes(32).toString('base64url');
+    await pool.query('UPDATE account SET email_verified_at=now() WHERE id=$1', [id]);
+    await pool.query("INSERT INTO session(account_id,token_hash,expires_at,ip_prefix) VALUES($1,$2,now()+interval '1 day','198.51.100.0/24')", [id, tokenHash(token)]);
     sessions.set(token, id);
     return { id, token };
   }
@@ -126,6 +135,48 @@ describe.skipIf(!databaseUrl)('оплата ЮKassa и интерес на на�
     expect((await w.checkout(a.token, { plan: 'nobadge', idempotency_key: 'short' })).status).toBe(422);
   });
 
+  it('stale offer, current email and fiscal overrides block every provider POST', async () => {
+    const a = await account(), w = wire(), before = yk.posts.length;
+    const request = { plan: 'nobadge', idempotency_key: key() };
+    expect((await w.checkout(a.token, { ...request, offer_version: 'old' })).body.error?.code).toBe('offer_version_changed');
+    for (const injected of [{ email: 'other@example.invalid' }, { receipt: {} }, { vat_code: 1 }, { amount_minor: 1 }])
+      expect((await w.checkout(a.token, { ...request, ...injected })).status).toBe(400);
+    await pool.query("UPDATE account SET email=$2 WHERE id=$1", [a.id, key().toLowerCase() + '@example.invalid']);
+    expect((await w.checkout(a.token, request)).body.error?.code).toBe('email_verification_required');
+    expect(yk.posts).toHaveLength(before);
+    expect(await count('SELECT count(*)::int AS n FROM payment_intent WHERE account_id=$1', [a.id])).toBe(0);
+    const email = (await pool.query('UPDATE account SET email_verified_at=now() WHERE id=$1 RETURNING email', [a.id])).rows[0].email;
+    const opened = await w.checkout(a.token, request);
+    expect(opened.status).toBe(201);
+    const fixed = yk.posts[before]!;
+    expect(fixed.body).toMatchObject({
+      amount: { value: '990.00', currency: 'RUB' }, receipt: {
+        customer: { email },
+        items: [{ quantity: '1.00', amount: { value: '990.00', currency: 'RUB' }, ...fiscal }]
+      }
+    });
+    // Model a lost POST response after provider acceptance. Only snapshot data may be sent again.
+    await pool.query('UPDATE payment_intent SET provider_payment_id=NULL WHERE id=$1', [opened.body.data!.intent_id]);
+    await w.checkout(a.token, request);
+    expect(yk.posts[before + 1]).toEqual(fixed);
+    await pool.query("UPDATE payment_intent SET provider_payment_id=NULL,first_post_at=now()-interval '24 hours' WHERE id=$1", [opened.body.data!.intent_id]);
+    expect((await w.checkout(a.token, request)).body.error?.code).toBe('payment_reconciliation_required');
+    expect(yk.posts).toHaveLength(before + 2);
+  });
+  it('a trusted webhook before the create response binds the original payment without reopening its form', async () => {
+    const a = await account(), real = yookassa(), hooks = wire(real);
+    const delayed = wire({
+      ...real, createPayment: async input => {
+        const payment = await real.createPayment(input);
+        yk.pay(payment.id);
+        expect((await hooks.notify(yk.notification(payment.id))).body.data?.applied).toBe(true);
+        return payment;
+      }
+    });
+    const opened = await delayed.checkout(a.token, { plan: 'nobadge', idempotency_key: key() });
+    expect(opened.body.data).toMatchObject({ status: 'succeeded', redirect_url: null });
+    expect(await count('SELECT count(*)::int AS n FROM purchase_mail_delivery WHERE account_id=$1', [a.id])).toBe(1);
+  });
   it('AC-3 / SC-US-011-2: уведомление об успехе → план nobadge на 30 дней, намерение succeeded, следующий /w/v1/config — badge_required=false', async () => {
     const w = wire();
     const a = await account();
@@ -203,23 +254,21 @@ describe.skipIf(!databaseUrl)('оплата ЮKassa и интерес на на�
     expect((await w.notify(raw)).body.data).toMatchObject({ applied: true, plan: 'nobadge' });
   });
 
-  it('AC-7 перестановка: две оплаты (nobadge, studio) в любом порядке — план studio и срок +60 от старта', async () => {
-    const w = wire();
-    const results: Array<{ plan: string; days: number }> = [];
-    for (const order of [['nobadge', 'studio'], ['studio', 'nobadge']] as const) {
-      const a = await account();
-      const first = await paid(a, order[0], w);
-      const second = await paid(a, order[1], w);
-      for (const p of [second, first]) expect((await w.notify(yk.notification(p.paymentId))).status).toBe(200);
-      const b = await billing(a.id);
-      results.push({ plan: b.plan, days: Math.round((b.plan_paid_until!.getTime() - b.now.getTime()) / DAY) });
+  it('AC-7: последовательные разрешённые оплаты прибавляют 60 дней; действующая Студия блокирует младший план', async () => {
+    const w = wire(), a = await account();
+    for (const plan of ['nobadge', 'studio'] as const) {
+      const { paymentId } = await paid(a, plan, w);
+      expect((await w.notify(yk.notification(paymentId))).body.data?.applied).toBe(true);
     }
-    expect(results).toEqual([{ plan: 'studio', days: 60 }, { plan: 'studio', days: 60 }]);
+    const b = await billing(a.id);
+    expect([b.plan, Math.round((b.plan_paid_until!.getTime() - b.now.getTime()) / DAY)]).toEqual(['studio', 60]);
+    expect((await w.checkout(a.token, { plan: 'nobadge', idempotency_key: key() })).body.error?.code).toBe('plan_conflict');
+    expect((await billing(a.id)).plan_paid_until).toEqual(b.plan_paid_until);
   });
 
   it('AC-8 сумма ≠ цене намерения: платёж записан needs_review amount_mismatch, план НЕ выдан, намерение не «успех»', async () => {
     const provider = createFakePaymentProvider();
-    const w = wire(provider);
+    const w = wire({ ...provider, shop: 'fake:local', fiscal });
     const a = await account();
     const r = await w.checkout(a.token, { plan: 'nobadge', idempotency_key: key() });
     const intent = r.body.data!.intent_id as string;
@@ -231,7 +280,7 @@ describe.skipIf(!databaseUrl)('оплата ЮKassa и интерес на на�
     expect((await billing(a.id)).plan).toBe('free');
     const row = (await pool.query('SELECT needs_review, review_reason, amount_minor FROM payment WHERE provider_payment_id = $1', [payment.id])).rows[0];
     expect(row).toEqual({ needs_review: true, review_reason: 'amount_mismatch', amount_minor: 50_000 });
-    expect((await w.status(a.token, intent)).body.data).toMatchObject({ status: 'pending' });
+    expect((await w.status(a.token, intent)).body.data).toMatchObject({ status: 'reconciliation_required' });
   });
 
   it('возврат (решение владельца): refund.succeeded — платёж refunded + needs_review, план остаётся до решения оператора', async () => {
@@ -324,8 +373,7 @@ describe.skipIf(!databaseUrl)('оплата ЮKassa и интерес на на�
     await w.notify(yk.notification(up.paymentId));
     expect(await billing(legacy.id)).toMatchObject({ plan: 'studio', plan_source: 'payment' });
     const legacyStudio = await account('studio');
-    const down = await paid(legacyStudio, 'nobadge', w);
-    await w.notify(yk.notification(down.paymentId));
+    expect((await w.checkout(legacyStudio.token, { plan: 'nobadge', idempotency_key: key() })).body.error?.code).toBe('plan_conflict');
     expect(await billing(legacyStudio.id)).toMatchObject({ plan: 'studio', plan_source: 'none' });
   });
 
@@ -356,8 +404,20 @@ describe.skipIf(!databaseUrl)('оплата ЮKassa и интерес на на�
     expect(await expirePaidPlans(pool, 100)).toBeGreaterThanOrEqual(1);
     expect(await billing(a.id)).toMatchObject({ plan: 'free', plan_source: 'none' });
     expect(await billing(op.id)).toMatchObject({ plan: 'studio', plan_source: 'operator' });
-    const lower = await paid(op, 'nobadge', w);
-    await w.notify(yk.notification(lower.paymentId));
+    expect((await w.checkout(op.token, { plan: 'nobadge', idempotency_key: key() })).body.error?.code).toBe('plan_conflict');
     expect(await billing(op.id)).toMatchObject({ plan: 'studio', plan_source: 'operator' });
   });
+  it('a store attestation failure leaves no checkout that can block corrected configuration', async () => {
+    const remote=await startFakeYooKassa({test:false});
+    try {
+      const a=await account();
+      const adapter=(testMode:boolean)=>createYooKassaProvider({fiscal,shopId:SHOP_ID,secretKey:SECRET,testMode,apiBase:remote.apiBase});
+      expect((await wire(adapter(true)).checkout(a.token,{plan:'nobadge',idempotency_key:key()})).status).toBe(503);
+      expect(await count('SELECT count(*) AS n FROM payment_intent WHERE account_id=$1',[a.id])).toBe(0);
+      expect(remote.posts).toHaveLength(0);
+      expect((await wire(adapter(false)).checkout(a.token,{plan:'nobadge',idempotency_key:key()})).status).toBe(201);
+      expect(remote.posts).toHaveLength(1);
+    } finally {await remote.close();}
+  });
+
 });

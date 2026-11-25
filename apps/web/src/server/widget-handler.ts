@@ -12,6 +12,7 @@
 import { readAccountStatus, readBotStatus } from '@n6/rag';
 import { readContact } from '@n6/rag/bot-settings';
 import type { BadgeEventResult, BadgeEventType, InstallEvent, InstallResult, WidgetBotRow } from '@n6/db';
+import { readTrustDocument } from '../lib/trust-legal-catalog';
 import { badgeHref, badgeRequired } from '../lib/badge-required';
 import { checkOrigin, corsHeaders, PREFLIGHT_HEADERS, requestOrigin } from './check-origin';
 import { clientIp, ipPrefix } from './ip';
@@ -70,7 +71,9 @@ export function createWidgetConfigHandler(deps: WidgetDependencies) {
     // Токен сессии посетителя: прежний (?vs= из sessionStorage виджета) продолжается, если годен для бота, origin и /24.
     const token = issueVisitorToken(deps.secret, { botId: bot.row.botId, origin, ipPrefix: ipPrefix(clientIp(request.headers)) },
       new URL(request.url).searchParams.get('vs'));
+    const notice = readTrustDocument('widget-notice');
     return reply(200, { data: {
+      visitor_notice: { text: notice.sections[0]!.paragraphs[0]!, href: new URL(notice.path, deps.publicOrigin).href },
       company_name: bot.row.companyName, greeting: bot.row.greeting, contact: bot.contact,
       badge_required: required, badge_href: required ? badgeHref(deps.publicOrigin, origin, bot.row.publicSlug) : null, visitor_session: token,
     } }, origin);

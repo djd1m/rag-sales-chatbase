@@ -10,9 +10,11 @@ import { loadCeilings, type Ceilings } from '../packages/rag/src/index';
 import { createPreviewDependencies } from '../apps/web/src/server/preview-deps';
 import { createPreviewAskHandler, createPreviewClaimHandler, createPreviewCreateHandler, createPreviewReadHandler, createRegistrationClaim,
   PREVIEW_LIMIT_MESSAGE, type PreviewDependencies } from '../apps/web/src/server/preview-handler';
+import { readTrustDocument } from '../apps/web/src/lib/trust-legal-catalog';
 import { createAuthHandler } from '../apps/web/src/server/auth-handler';
 import { AuthService } from '../apps/web/src/server/auth';
 import { PgAuthStore } from '../apps/web/src/server/auth-store';
+import { previewClaimContext } from '../apps/web/src/server/preview-claim-context';
 import { tokenHash } from '../apps/web/src/server/preview-session';
 import { watchdogTick } from '../apps/worker/src/watchdog';
 import { ensureTestDatabase } from '../scripts/test-db.mjs';
@@ -84,7 +86,8 @@ describe.skipIf(!databaseUrl)('preview-flow на настоящем Postgres + p
       register: async (b: Browser, email: string) => {
         const claim = createRegistrationClaim({ secret, authenticate: (t) => auth.authenticate(t), claim: deps.claim });
         const handler = createAuthHandler('register', { auth, publicOrigin: ORIGIN, allowMutation: async () => true, claimPreview: claim });
-        return b.take(await handler(post('/api/auth/register', { email, password: 'пароль-надёжный-1' }, b.headers())));
+        return b.take(await handler(post('/api/auth/register', { email, password: 'пароль-надёжный-1',
+          terms: { accepted: true, version: readTrustDocument('terms').version }, consent: { accepted: true, version: readTrustDocument('consent').version } }, b.headers())));
       },
     };
   }
@@ -279,11 +282,29 @@ describe.skipIf(!databaseUrl)('preview-flow на настоящем Postgres + p
     expect(await count('SELECT count(*)::int AS n FROM bot WHERE id = $1', [bot_id])).toBe(1);
   });
 
+  it('исход claim и фактическая готовность разделены', async () => {
+    const w = wire(), browser = new Browser(freshIp());
+    await w.register(browser, `draft-${uuid()}@example.org`);
+    const created = await w.create(browser, 'kolos.example');
+    const job = (await created.json()).data.index_job_id;
+    await pool.query("UPDATE index_job SET status='failed', failure_reason='no_text' WHERE id=$1", [job]);
+    const result = await w.claim(browser, job);
+    expect(result.status).toBe(200);
+    expect(result.headers.get('X-Sufler-Claim-Context')).toBe(previewClaimContext(secret, browser.jar.get('__Host-n6_session')!));
+    expect(result.headers.get('Cache-Control')).toContain('no-store');
+    expect(result.headers.has('Access-Control-Expose-Headers')).toBe(false);
+    const { data } = await result.json();
+    expect((await pool.query('SELECT j.status, b.answers_verified_at IS NOT NULL AS answers_verified FROM index_job j JOIN bot b ON b.id=j.bot_id WHERE j.id=$1 AND b.id=$2', [job, data.bot_id])).rows)
+      .toEqual([{ status: 'failed', answers_verified: false }]);
+  });
+
   it('SC-US-003-3: свой повторный claim — 409; чужой аккаунт с тем же токеном — 404; claim без входа — 401', async () => {
     const w = wire(), b = new Browser(freshIp());
     const id = await ready(w, b);
     const token = b.jar.get('__Host-n6_preview')!;
-    expect((await w.claim(b, id)).status).toBe(401);
+    const guest = await w.claim(b, id);
+    expect(guest.status).toBe(401);
+    expect(guest.headers.has('X-Sufler-Claim-Context')).toBe(false);
     await w.register(b, `me-${randomBytes(4).toString('hex')}@example.org`);
     b.jar.set('__Host-n6_preview', token);                        // вернуть использованный токен
     expect((await w.claim(b, id)).status).toBe(409);

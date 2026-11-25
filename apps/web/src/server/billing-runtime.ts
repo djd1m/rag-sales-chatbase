@@ -11,6 +11,7 @@ export function getBillingDependencies(): BillingDependencies {
     return createBillingDependencies({
       pool, publicOrigin: config.publicOrigin, provider: payments,
       allowMutation: (ip, account) => allowMutation(redis, ip, config.sessionSecret, account),
+      tokenHash: token => auth.tokenHash(token),
       authenticate: (token) => auth.authenticate(token),
     });
   })();

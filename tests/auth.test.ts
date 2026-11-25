@@ -8,6 +8,8 @@ import { AuthService, BCRYPT_COST, type AccountCredentials, type AuthStore, type
 import { createAuthHandler } from '../apps/web/src/server/auth-handler';
 import { ipPrefix, clientIp } from '../apps/web/src/server/ip';
 
+import { readTrustDocument } from '../apps/web/src/lib/trust-legal-catalog';
+const accept = {terms:{accepted:true,version:readTrustDocument('terms').version},consent:{accepted:true,version:readTrustDocument('consent').version}};
 const secret = randomBytes(32).toString('hex');
 let passwordHash: string;
 beforeAll(async () => { passwordHash = await bcrypt.hash('правильный пароль', BCRYPT_COST); });
@@ -15,10 +17,10 @@ function store(account: AccountCredentials | null = null): AuthStore {
   return { findAccount: vi.fn(async () => account), register: vi.fn(async () => {}),
     createSession: vi.fn(async () => true), revoke: vi.fn(async () => {}), findSession: vi.fn(async () => null) };
 }
-function request(password = 'неправильный пароль', headers: Record<string, string> = {}) {
+function request(password = 'неправильный пароль', headers: Record<string, string> = {}, signup = false) {
   return new Request('https://test.invalid/api/auth/login', { method: 'POST',
     headers: { 'content-type': 'application/json', 'x-forwarded-for': '192.0.2.99', ...headers },
-    body: JSON.stringify({ email: 'user@example.org', password }) });
+    body: JSON.stringify({ email: 'user@example.org', password, ...(signup ? accept : {}) }) });
 }
 function handler(action: 'login' | 'register' | 'logout', db: AuthStore, allowMutation = async () => true) {
   return createAuthHandler(action, { auth: new AuthService(db, secret), publicOrigin: 'https://test.invalid', allowMutation });
@@ -63,7 +65,7 @@ describe('Аутентификация', () => {
       expect(await bcrypt.compare('правильный пароль', hash)).toBe(true);
       expect(session.hash).toMatch(/^[a-f0-9]{64}$/);
     });
-    const result = await handler('register', db)(request('правильный пароль'));
+    const result = await handler('register', db)(request('правильный пароль',{},true));
     expect(result.status).toBe(200); expect(await result.json()).toEqual({ data: { ok: true } });
   });
   it('logout сначала отзывает серверную сессию, затем удаляет cookie', async () => {
@@ -86,7 +88,7 @@ describe('Аутентификация', () => {
     expect((await handler('login', store())(request(undefined, { origin: 'https://other.invalid' }))).status).toBe(403);
   });
   it('Пароль длиннее 72 байт не молча обрезается bcrypt', async () => {
-    const db = store(); expect((await handler('register', db)(request('я'.repeat(37)))).status).toBe(422);
+    const db = store(); expect((await handler('register', db)(request('я'.repeat(37),{},true))).status).toBe(422);
     expect(db.register).not.toHaveBeenCalled();
   });
   it('Страж: хэширование физически отделено от соединений и транзакций', () => {

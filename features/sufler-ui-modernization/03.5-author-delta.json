@@ -1,0 +1,49 @@
+{
+  "addressed": [
+    "Q-01",
+    "Q-02",
+    "Q-03",
+    "Q-04",
+    "UI-T01",
+    "UI-T02",
+    "UI-RISK-01",
+    "UI-RISK-02"
+  ],
+  "changedScope": [
+    "features/sufler-ui-modernization/01_requirements.md",
+    "features/sufler-ui-modernization/03_adr/001-preserve-preview-intent.md",
+    "features/sufler-ui-modernization/03_adr/002-evolve-existing-screens.md",
+    "features/sufler-ui-modernization/03_shift_left.md",
+    "features/sufler-ui-modernization/04_domain_model.md",
+    "features/sufler-ui-modernization/05_architecture.md",
+    "features/sufler-ui-modernization/diagrams/domain-model.mermaid",
+    "features/sufler-ui-modernization/diagrams/architecture-c4.mermaid",
+    "features/sufler-ui-modernization/diagrams/sequence-happy.mermaid",
+    "features/sufler-ui-modernization/diagrams/sequence-error.mermaid",
+    "features/sufler-ui-modernization/diagrams/sequence-claim.mermaid",
+    "openspec/changes/sufler-ui-modernization/design.md",
+    "openspec/changes/sufler-ui-modernization/specs/sufler/onboarding/spec.md",
+    "openspec/changes/sufler-ui-modernization/specs/sufler/preview-workspace/spec.md",
+    "apps/web/src/app/Landing.tsx",
+    "apps/web/src/app/login/AuthForm.tsx",
+    "apps/web/src/app/dashboard/page.tsx",
+    "apps/web/src/app/dashboard/CabinetViews.tsx",
+    "apps/web/src/app/preview/PreviewStart.tsx",
+    "apps/web/src/app/preview/PreviewViews.tsx",
+    "apps/web/src/app/preview/[jobId]/PreviewScreen.tsx",
+    "apps/web/src/lib/payment-return.ts",
+    "apps/web/src/server/auth-handler.ts",
+    "apps/web/src/server/preview-handler.ts",
+    "apps/web/src/server/cabinet-session.ts",
+    "tests/preview-flow.integration.test.ts",
+    "tests/browser/widget-harness.ts"
+  ],
+  "classification": "structural",
+  "delta": "Уточнены отдельное восстановление GET того же jobId при 503 и done/site:null, раскрытая первая цитата в обоих чатах владельца, ветки первого unknown, результат claim по фактическому ответу и действительной сессии, безопасное хранение адреса и реальный наблюдаемый стендовый сценарий U09. Добавлены route-level контрольные данные и контракты OpenSpec. Публичные JSON и HTTP-статусы auth/claim сохраняются, для корреляции UI предложен узкий same-origin заголовок.",
+  "evidence": "В ADR-001, ADR-002, архитектуре, требованиях, shift-left и OpenSpec каждое условие связано с конкретным переходом или наблюдаемым тестом. 03.5-author-delta.md содержит карту восьми IDs. Изменения относятся к проекту, исполнение продуктовых тестов и стенд U09 не заявлены.",
+  "newRisks": {
+    "assessment": "Новые зависимости проекта — доступность хранилища вкладки, согласованное внедрение заголовка и локальный синтетический транспорт. Они включены в существующие условия UI-RISK-01, UI-RISK-02 и UI-T02. Дополнительных открытых условий автор не выявил.",
+    "evidence": "ADR-001 ограничивает same-origin контекст до двух минут, потребляет его однократно и сохраняет видимость отказа при блокировке storage. Безопасный корневой адрес реализует совместимый повтор; неспособный безопасно сохраняться адрес доступен через ручной ввод. 05 разделяет настоящие маршруты, synthetic модель и внешние события и запрещает реальный egress для U09.",
+    "conditions": []
+  }
+}

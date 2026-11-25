@@ -8,6 +8,7 @@ export default defineConfig({
   resolve: { alias: [
     { find: /^@n6\/rag\/(check-address|bot-settings|commission|payout-details|constants)$/, replacement: path.resolve('packages/rag/src') + '/$1.ts' },
     { find: /^@n6\/rag$/, replacement: path.resolve('packages/rag/src/index.ts') },
+    { find: /^@n6\/notifications$/, replacement: path.resolve('packages/notifications/src/index.ts') },
     { find: /^@n6\/db$/, replacement: path.resolve('packages/db/src/index.ts') },
     { find: /^@n6\/queue$/, replacement: path.resolve('packages/queue/src/index.ts') },
   ] },

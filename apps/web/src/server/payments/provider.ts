@@ -57,7 +57,9 @@ export type VerifiedNotification =
   | { readonly kind: 'ignored'; readonly event: string };
 
 export interface CreatePaymentInput {
+  readonly serializedBody?: string;
   /** Наш идентификатор намерения. Он же идемпотентный ключ у провайдера. */
+  readonly receipt: { email: string; fiscal: NonNullable<PaymentProvider['fiscal']> };
   readonly orderId: string;
   readonly amountMinor: number;
   readonly returnUrl: string;
@@ -73,7 +75,11 @@ export interface NotificationContext {
 }
 
 export interface PaymentProvider {
+  attestEnvironment?(): Promise<void>;
+  readonly shop?: string;
+  readonly fiscal?: { vat_code: number; payment_subject: string; payment_mode: 'full_payment'; tax_system_code?: number } | null;
   readonly name: string;
+  serializePayment?(input: CreatePaymentInput): string;
   createPayment(input: CreatePaymentInput): Promise<RemotePayment>;
   getPayment(id: string): Promise<RemotePayment>;
   /** Полная проверка подлинности. Бросает `PaymentVerificationError` или

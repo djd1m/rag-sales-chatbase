@@ -1,6 +1,6 @@
 // из N5: projects/05-podcast-clips-opus/apps/web/src/server/auth-store.ts — колонка session.token_hash (Pseudocode), префикс /24 или /48
 import type { Pool } from 'pg';
-import { registerAccount } from '@n6/db';
+import { registerAccount, type RegistrationInput } from '@n6/db';
 import type { AccountCredentials, AuthStore, PartnerInput, SessionInput } from './auth';
 
 export class PgAuthStore implements AuthStore {
@@ -12,8 +12,8 @@ export class PgAuthStore implements AuthStore {
   }
   // Одна транзакция: аккаунт → сессия → ApplyPartnerCode (partner-and-studio, packages/db/src/partners.ts). Конфликт email
   // не входит в существующий аккаунт и не выдаёт его занятость; явный неверный код — 'invalid_code', аккаунта нет.
-  async register(email: string, passwordHash: string, session: SessionInput, partner?: PartnerInput): Promise<'ok' | 'invalid_code'> {
-    return registerAccount(this.pool, { email, passwordHash, session, partner });
+  async register(email: string, passwordHash: string, session: SessionInput, partner?: PartnerInput, acceptance?: RegistrationInput['acceptance']): Promise<'ok' | 'invalid_code'> {
+    return registerAccount(this.pool, { email, passwordHash, session, partner, acceptance });
   }
   async createSession(account: AccountCredentials, session: SessionInput): Promise<boolean> {
     // Повторная проверка под блокировкой сериализуется с началом удаления аккаунта.

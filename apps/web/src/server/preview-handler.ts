@@ -11,12 +11,14 @@
 // Чужой и несуществующий предпросмотр — один ответ 404 (канон: «Чужой ресурс — 404»).
 import type { AnswerResult, HistoryTurn, VisitorRequest } from '@n6/rag';
 import type { ClaimOutcome, CreatePreviewResult, IndexJobView, PreviewAccess, PreviewSite } from '@n6/db';
+import { previewClaimContext } from './preview-claim-context';
+import { PREVIEW_CLAIM_CONTEXT_HEADER } from '../lib/preview-claim-notice';
 import { readSessionCookie } from './auth-handler';
 import { clientIp, ipPrefix } from './ip';
 import { BROWSER_COOKIE, PREVIEW_COOKIE, browserCookie, clearPreviewCookie, draftName, isPlainObject, newToken, normalizeSiteUrl,
   previewCookie, readCookie, readJsonBody, tokenHash } from './preview-session';
 
-export const PREVIEW_LIMIT_MESSAGE = 'Бесплатный предпросмотр на сегодня исчерпан — зарегистрируйтесь, чтобы продолжить';
+export const PREVIEW_LIMIT_MESSAGE = 'Достигнут суточный предел предпросмотра. Попробуйте завтра.';
 const MAX_BODY_BYTES = 4096;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -224,10 +226,13 @@ export function createPreviewClaimHandler(deps: PreviewDependencies) {
       if (entry instanceof Response) return entry;
       const session = readSessionCookie(request);
       const account = session ? await deps.authenticate(session) : null;
-      if (!account) return fail(401, 'unauthorized', 'Войдите или зарегистрируйтесь, чтобы сохранить бота');
+      if (!session || !account) return fail(401, 'unauthorized', 'Войдите или зарегистрируйтесь, чтобы сохранить бота');
       const token = readCookie(request, PREVIEW_COOKIE);
       if (!token || !UUID.test(indexJobId)) return notFound();
-      return claimResponse(await deps.claim({ tokenHash: tokenHash(deps.secret, 'preview', token), accountId: account.account_id, indexJobId }));
+      const outcome = await deps.claim({ tokenHash: tokenHash(deps.secret, 'preview', token), accountId: account.account_id, indexJobId });
+      const response = claimResponse(outcome);
+      response.headers.set(PREVIEW_CLAIM_CONTEXT_HEADER, previewClaimContext(deps.secret, session));
+      return response;
     } catch {
       return unavailable();
     }

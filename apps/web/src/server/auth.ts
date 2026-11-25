@@ -1,4 +1,6 @@
 // из N5: projects/05-podcast-clips-opus/apps/web/src/server/auth.ts — перечисления из @n6/rag
+import type { RegistrationInput } from '@n6/db';
+import { previewClaimContext } from './preview-claim-context';
 import bcrypt from 'bcrypt';
 import { createHmac, randomBytes } from 'node:crypto';
 import { readAccountStatus, SESSION_TTL_DAYS } from '@n6/rag';
@@ -16,7 +18,7 @@ export interface PartnerInput { explicit: string | null; cookie: string | null }
 export interface AuthStore {
   findAccount(email: string): Promise<AccountCredentials | null>;
   // 'invalid_code' — явный код неверен или заморожен: аккаунт НЕ создан (FR-PARTNER-001); иначе — успех.
-  register(email: string, passwordHash: string, session: SessionInput, partner?: PartnerInput): Promise<void | 'ok' | 'invalid_code'>;
+  register(email: string, passwordHash: string, session: SessionInput, partner?: PartnerInput, acceptance?: RegistrationInput['acceptance']): Promise<void | 'ok' | 'invalid_code'>;
   createSession(account: AccountCredentials, session: SessionInput): Promise<boolean>;
   revoke(hash: string): Promise<void>;
   findSession(hash: string): Promise<{ account_id: string } | null>;
@@ -35,11 +37,11 @@ export class AuthService {
     return token;
   }
   // Регистрация с кодом партнёра (partner-and-studio): null — явный код неверен или заморожен (ошибка поля, аккаунт не создан).
-  async registerWithCode(email: string, password: string, ipPrefix: string, partner?: PartnerInput): Promise<string | null> {
+  async registerWithCode(email: string, password: string, ipPrefix: string, partner?: PartnerInput, acceptance?: RegistrationInput['acceptance']): Promise<string | null> {
     const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
     const session = this.session(ipPrefix);
     // Хэш готов ДО короткой атомарной записи. Для занятого адреса cookie — случайная пустышка.
-    const result = await this.store.register(email, passwordHash, session.record, partner);
+    const result = await this.store.register(email, passwordHash, session.record, partner, acceptance);
     return result === 'invalid_code' ? null : session.token;
   }
   async login(email: string, password: string, ipPrefix: string): Promise<string | null> {
@@ -48,6 +50,9 @@ export class AuthService {
     if (!account || !matches || readAccountStatus(account.status) !== 'active') return null;
     const session = this.session(ipPrefix);
     return await this.store.createSession(account, session.record) ? session.token : null;
+  }
+  async claimContext(token: string) {
+    return await this.authenticate(token) ? previewClaimContext(this.secret, token) : null;
   }
   async logout(token: string): Promise<void> { await this.store.revoke(this.tokenHash(token)); }
   async authenticate(token: string) { return this.store.findSession(this.tokenHash(token)); }

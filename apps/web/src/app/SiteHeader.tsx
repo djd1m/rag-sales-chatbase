@@ -7,6 +7,7 @@ export function SiteHeader({ theme, home = '/', children }: { theme: Theme; home
   return <nav className="navigation" aria-label="Основная навигация">
     <a className="brand" href={home}><span aria-hidden="true">С</span> Суфлёр</a>
     {children ?? <><a href="/pricing">Тарифы</a><a href="/login">Войти</a></>}
+    <a className="support-nav-link" href="/support">Поддержка</a>
     <ThemeToggle initial={theme} />
   </nav>;
 }

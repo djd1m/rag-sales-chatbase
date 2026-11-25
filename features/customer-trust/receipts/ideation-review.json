@@ -1,0 +1,350 @@
+{
+  "schema": "fa-review-convergence-1",
+  "phase": "ideation",
+  "nonce": "10508591-f035-46a7-9614-67fcc4398a19",
+  "revision": "3bdcaeed42340b3ee1f8050f3a132f453ae8ad24787d4ac5c489498753b70283",
+  "author": {
+    "addressed": [
+      "CT-T01",
+      "CT-T02",
+      "CT-T03",
+      "CT-RISK-01",
+      "CT-RISK-02",
+      "CT-RISK-03",
+      "CT-RISK-04",
+      "CTQ-01",
+      "CTQ-02",
+      "CTQ-03",
+      "CTQ-04",
+      "CTQ-05"
+    ],
+    "changedScope": [
+      "features/customer-trust/01_requirements.md",
+      "features/customer-trust/02_research.md",
+      "features/customer-trust/03.5-author-delta.md",
+      "features/customer-trust/03_adr/001-bind-email-actions-to-account.md",
+      "features/customer-trust/03_adr/002-persist-checkout-proof.md",
+      "features/customer-trust/03_adr/003-isolate-support-and-record-acceptance.md",
+      "features/customer-trust/03_shift_left.md",
+      "features/customer-trust/04_domain_model.md",
+      "features/customer-trust/05_architecture.md",
+      "features/customer-trust/diagrams/sequence-payment.mermaid",
+      "features/customer-trust/diagrams/sequence-support.mermaid",
+      "features/customer-trust/owner-authority.md",
+      "openspec/changes/customer-trust/specs/billing/verified-purchase/spec.md",
+      "openspec/changes/customer-trust/specs/identity/email-access/spec.md",
+      "openspec/changes/customer-trust/specs/legal/user-documents/spec.md",
+      "openspec/changes/customer-trust/specs/support/customer-help/spec.md"
+    ],
+    "classification": "structural",
+    "delta": "Проект связывает принятие с показанными редакциями, определяет полные пользовательские состояния verify/reset и сверки покупки, ограничивает outbox и его гонки со стиранием, проверяет межвкладочную идентичность, закрепляет локальный контур и измеримую сравнительную нагрузку.",
+    "evidence": "Трассировка всех 12 исходных условий в features/customer-trust/03.5-author-delta.md. SHA-256 сравнен со снимком e4dd58d963088a68457020c7cb0cd76816dd659deb5677b08094ea3e8b37b5ba. Обновлены четыре OpenSpec-контракта, strict validation passed. Реализация и тесты ещё не выполнялись. Координатор: 02_research.md добавлен при первоначальной подготовке host до initial independent review; unchanged since that review. Host сохраняет это добавление в pending changedPaths; оно явно включено для полной проверки дельты. SHA-256 0b32b19081873c80a7e266bdd31e598b2e1eda198d12cbe9300ba90a92554d4a.",
+    "newRisks": {
+      "assessment": "Новые компромиссы оценены, отдельные новые условия не выделены. Остаточные ограничения остаются в соответствующих исходных рисках и активационных предпосылках.",
+      "evidence": "Оценены дополнительный шаг открытия письма, неподтверждённый кандидат resend, нагрузка опроса authority, граница уже допущенного HTTP при erasure и фактическая фильтрация его внешней истории. Контрмеры, пределы и сценарии закреплены в ADR-001–003, 05_architecture и 03.5-author-delta.md.",
+      "conditions": []
+    }
+  },
+  "reviews": [
+    {
+      "reviewer": "qcsd-testability",
+      "family": "codex",
+      "independent": true,
+      "verdict": "clean",
+      "conditions": [
+        {
+          "id": "CT-T01",
+          "owner": "qcsd-testability",
+          "severity": "HIGH",
+          "classification": "structural",
+          "requirement": "Define workload, duration, baseline, measurable RAG/index availability and latency threshold, method and resource observations for NFR-2, or keep the criterion explicitly owner-open until determined.",
+          "scope": [
+            "features/customer-trust/01_requirements.md",
+            "features/customer-trust/05_architecture.md"
+          ],
+          "evidence": "NFR-2 says to check availability and budgeting with 2 CPU/4 GB but specifies no workload or pass/fail threshold; architecture defers the load run."
+        },
+        {
+          "id": "CT-T02",
+          "owner": "qcsd-testability",
+          "severity": "HIGH",
+          "classification": "structural",
+          "requirement": "Specify an approved per-entity and per-field deletion/retention matrix including proof, session, acceptance, payment snapshot, delivery payload and remote inbox, with the delivery-start linearization and erasure/lease/late-result race contract.",
+          "scope": [
+            "features/customer-trust/01_requirements.md",
+            "features/customer-trust/05_architecture.md"
+          ],
+          "evidence": "NFR-3 and architecture refer to a matrix without specifying each new field outcome; FR-10 distinguishes deliveries not yet started but the worker lease/start boundary is not defined."
+        },
+        {
+          "id": "CT-T03",
+          "owner": "qcsd-testability",
+          "severity": "HIGH",
+          "classification": "structural",
+          "requirement": "Specify reproducible isolated PostgreSQL/Redis, controlled clock and concurrency barriers, provider HTTP and multi-origin SDK fakes, verified egress denial and external request accounting; distinguish simulated results from real service activation evidence.",
+          "scope": [
+            "features/customer-trust/01_requirements.md",
+            "features/customer-trust/05_architecture.md"
+          ],
+          "evidence": "NFR-5 requires zero external operations and a network boundary check, while architecture only specifies local simulators; keys and separate inbox activation are not yet verified."
+        }
+      ],
+      "verifications": [
+        {
+          "id": "CT-T01",
+          "revision": "3bdcaeed42340b3ee1f8050f3a132f453ae8ad24787d4ac5c489498753b70283",
+          "classification": "structural",
+          "evidence": "05_architecture specifies verified existing baseline commit, workload, three paired trials, resources, p95 thresholds, observations and regression limits; actual measurement remains QE work.",
+          "implementationVerified": true
+        },
+        {
+          "id": "CT-T02",
+          "revision": "3bdcaeed42340b3ee1f8050f3a132f453ae8ad24787d4ac5c489498753b70283",
+          "classification": "structural",
+          "evidence": "05_architecture erasure table covers local proof, sessions, acceptance, fiscal snapshot and delivery, retained financial trail and external process; account-to-delivery admission, generation CAS and in-flight HTTP outcomes have concurrent-test checkpoints.",
+          "implementationVerified": true
+        },
+        {
+          "id": "CT-T03",
+          "revision": "3bdcaeed42340b3ee1f8050f3a132f453ae8ad24787d4ac5c489498753b70283",
+          "classification": "structural",
+          "evidence": "05_architecture defines isolated Compose DB/Redis/web/worker/browser, network denial probe, fake HTTP and two origins, counters, clock and race barriers; real activation remains deferred pending keys and provider evidence.",
+          "implementationVerified": true
+        }
+      ],
+      "newRisks": {
+        "assessment": "No additional serious conditions identified after focused design review",
+        "evidence": "Reviewed author assessment and changed design, diagrams, OpenSpec and affected dependencies; fake/provider limits and future acceptance remain explicit in 03.5-testability.md.",
+        "conditions": []
+      },
+      "authorAssessmentChecked": true,
+      "deltaVerification": {
+        "classification": "structural",
+        "evidence": "Independently checked changed requirements, ADRs, domain and architecture, diagrams, relevant OpenSpec and author delta against current snapshot; the documented acceptance and local-test constraints are design evidence, not executed tests.",
+        "implementationVerified": true
+      }
+    },
+    {
+      "reviewer": "qcsd-quality",
+      "family": "codex",
+      "independent": true,
+      "verdict": "clean",
+      "conditions": [
+        {
+          "id": "CTQ-01",
+          "owner": "qcsd-quality",
+          "severity": "HIGH",
+          "classification": "structural",
+          "requirement": "FR-3/5. Определить полный путь открытия verify-письма без текущей сессии на втором устройстве: после обычного входа в нужный аккаунт при действующей выдающей сессии владелец может завершить verify и явно вернуться к прежнему плану/PDF. При несовпадении аккаунта, отозванной выдающей сессии либо истёкшей ссылке доступен безопасный повтор. Токен не попадает в login next, query или долговременное хранилище.",
+          "scope": [
+            "features/customer-trust/01_requirements.md",
+            "features/customer-trust/03_adr/001-bind-email-actions-to-account.md",
+            "features/customer-trust/05_architecture.md"
+          ],
+          "evidence": "ADR-001 разрешает вторую сессию, требует удалить fragment из адреса до POST и возвращает 401 без действующей сессии. Обычный переход на /login теряет секрет в памяти страницы. После входа не задано, как вернуться к одному и тому же письму."
+        },
+        {
+          "id": "CTQ-02",
+          "owner": "qcsd-quality",
+          "severity": "HIGH",
+          "classification": "structural",
+          "requirement": "FR-3/4, NFR-4. Определить пользовательские статусы для фонового forgot и синхронного verify. Forgot 202 подтверждает только принятие запроса сервисом, одинаково для известных/неизвестных адресов. Для недействительной/использованной ссылки дать достижимый повтор правильного действия; при ошибке длины нового пароля сохранить рабочую ссылку для исправления, при отключённой почте дать честный статус.",
+          "scope": [
+            "features/customer-trust/01_requirements.md",
+            "features/customer-trust/03_adr/001-bind-email-actions-to-account.md",
+            "features/customer-trust/05_architecture.md"
+          ],
+          "evidence": "По ADR-001 ответ forgot приходит до вызова Resend, а NFR-4 говорит, что успешная отправка означает приём провайдером. Оба разных случая reset (ошибка нового пароля и истёкший proof) попадают под 422. Без правила UI может обещать письмо после первого 202 либо увести пользователя за новой ссылкой при исправимом вводе."
+        },
+        {
+          "id": "CTQ-03",
+          "owner": "qcsd-quality",
+          "severity": "HIGH",
+          "classification": "structural",
+          "requirement": "FR-1/2/6. При начале новой покупки версия оферты, на которую ссылался экран явного подтверждения, совпадает с редакцией, закреплённой сервером. Если редакция сменилась до нового POST, показать текущий текст и запросить новое явное действие до создания intent и обращения к провайдеру. Повтор уже созданного intent использует исходный snapshot.",
+          "scope": [
+            "features/customer-trust/01_requirements.md",
+            "features/customer-trust/03_adr/002-persist-checkout-proof.md",
+            "features/customer-trust/03_adr/003-isolate-support-and-record-acceptance.md",
+            "features/customer-trust/05_architecture.md"
+          ],
+          "evidence": "ADR-003 связывает принятие оферты с checkout; сервер фиксирует текущую версию. В таблице API POST содержит ровно plan и idempotency_key, без привязки к показанной редакции. Открытая вкладка могла показать редакцию A, а сервер при нажатии записать B."
+        },
+        {
+          "id": "CTQ-04",
+          "owner": "qcsd-quality",
+          "severity": "HIGH",
+          "classification": "structural",
+          "requirement": "FR-7/8/10. Задать наблюдаемый статус и продолжение для доверенного платежа без grant на сверке даже при наличии ранее активного плана. Возврат и повтор сообщают о сверке, не объявляют план применённым или возврат денег и не предлагают повторную оплату. Проверка того же intent остаётся доступна; обращение предлагается только по действительному каналу.",
+          "scope": [
+            "features/customer-trust/01_requirements.md",
+            "features/customer-trust/03_adr/002-persist-checkout-proof.md",
+            "features/customer-trust/05_architecture.md"
+          ],
+          "evidence": "payment-return.ts выводит успех из succeeded и любого account_plan платного уровня. Старший план может действовать по прежней покупке. При неизвестном статусе после тайм-аута ReturnScreen предлагает написать, даже если inbox и email выключены. ADR-002 описывает запись сверки оператору, но GET/форма не задают доказательство grant именно этого intent для этого случая."
+        },
+        {
+          "id": "CTQ-05",
+          "owner": "qcsd-quality",
+          "severity": "WARNING",
+          "classification": "structural",
+          "requirement": "FR-1/9 и NFR-3. Связать публичные обещания на странице удаления, в политике и подтверждении завершения с фактическим объёмом стирания. Указать предел локальной очистки ранее переданной переписки/писем и реально доступный способ обращения при его наличии, без заявления об удалении внешней истории по локальной квитанции.",
+          "scope": [
+            "features/customer-trust/01_requirements.md",
+            "features/customer-trust/03_adr/003-isolate-support-and-record-acceptance.md",
+            "features/customer-trust/05_architecture.md"
+          ],
+          "evidence": "ADR-003 оставляет историю у Libredesk и её автоматическое удаление отдельным решением. ErasureStatus.tsx подтверждает завершение локального стирания; после расширения спутать отзыв JWT, очистку данных Суфлёра и физическое удаление внешней переписки легко. Для отключённого inbox плюс отсутствующего резервного email нельзя обещать сообщение оператору."
+        }
+      ],
+      "verifications": [
+        {
+          "id": "CTQ-01",
+          "revision": "3bdcaeed42340b3ee1f8050f3a132f453ae8ad24787d4ac5c489498753b70283",
+          "classification": "structural",
+          "evidence": "01_requirements.md:33, ADR-001:50,92, 05_architecture.md:70 и email-access/spec.md:16–20 закрепляют обычный вход во втором браузере, повторное открытие письма, проверку актуальной и выдающей сессий одного аккаунта и явное продолжение. При отзыве или несовпадении предусмотрен безопасный путь, секрет не переносится в login next.",
+          "implementationVerified": true
+        },
+        {
+          "id": "CTQ-02",
+          "revision": "3bdcaeed42340b3ee1f8050f3a132f453ae8ad24787d4ac5c489498753b70283",
+          "classification": "structural",
+          "evidence": "ADR-001:52,92, 05_architecture.md:59–62 и email-access/spec.md:36–37 различают ответ приложения forgot и принятие verify транспортом. На 422 invalid_password действующий proof остаётся в памяти для исправления; invalid_recovery_link возвращает к forgot, disabled/unknown не обещают вручения.",
+          "implementationVerified": true
+        },
+        {
+          "id": "CTQ-03",
+          "revision": "3bdcaeed42340b3ee1f8050f3a132f453ae8ad24787d4ac5c489498753b70283",
+          "classification": "structural",
+          "evidence": "01_requirements.md:56, ADR-002:54, ADR-003:54 и 05_architecture.md:63, verified-purchase/spec.md:13–14 требуют offer_version показанной редакции. Старый экран получает 409 без создания intent и внешнего POST, для новой редакции нужно новое действие, существующая покупка сохраняет snapshot. Сервер выбирает канонические цену и digest.",
+          "implementationVerified": true
+        },
+        {
+          "id": "CTQ-04",
+          "revision": "3bdcaeed42340b3ee1f8050f3a132f453ae8ad24787d4ac5c489498753b70283",
+          "classification": "structural",
+          "evidence": "ADR-002:54,88,91, 05_architecture.md:63–64 и verified-purchase/spec.md:24–27 явно отделяют reconciliation_required данного intent от прежде активного плана. Допустим повтор GET и только доступный контакт, без предложения второй оплаты, объявления срока, письма или возврата.",
+          "implementationVerified": true
+        },
+        {
+          "id": "CTQ-05",
+          "revision": "3bdcaeed42340b3ee1f8050f3a132f453ae8ad24787d4ac5c489498753b70283",
+          "classification": "structural",
+          "evidence": "ADR-003:58, 01_requirements.md:103, 05_architecture.md:96–104 и user-documents/spec.md:37–40 задают границы локального стирания на экране удаления, в политике и квитанции. Таблица отличает отзыв JWT и остановку ещё не допущенной отправки от уже отправленной почты, переписки или фискальных сведений. Указан действительный канал при его наличии.",
+          "implementationVerified": true
+        }
+      ],
+      "newRisks": {
+        "assessment": "Дополнительных условий после проверки дельты не выявлено. Для внешних обработчиков остаются согласованные условия последующей активации.",
+        "evidence": "Проверены риски повторного открытия письма, неизвестного итога Resend, позднего сетевого результата после erasure и восстановления вкладки поддержки. ADR-001:50–52, 05:72–82,96–110 и отдельные OpenSpec ограничивают последствия и задают проверяемые признаки. Действительной доставки, работы production inbox, выдачи кассового чека и прогона нагрузки этот этап не удостоверяет.",
+        "conditions": []
+      },
+      "authorAssessmentChecked": true,
+      "deltaVerification": {
+        "classification": "structural",
+        "evidence": "Сверены изменённые 01, все три ADR, 04/05, shift-left, схема платежа и поддержки, четыре OpenSpec, полномочия владельца и handoff. Digest 02_research.md равен первоначальному 0b32b19081873c80a7e266bdd31e598b2e1eda198d12cbe9300ba90a92554d4a. Пересмотрены цена/срок, proof и выдающая сессия, per-intent grant, изолированный transport, watchdog, таймер восстановления authority и матрица erasure. Изменения затрагивают серверные контракты и видимые действия.",
+        "implementationVerified": true
+      }
+    },
+    {
+      "reviewer": "qcsd-risk",
+      "family": "codex",
+      "independent": true,
+      "verdict": "clean",
+      "conditions": [
+        {
+          "id": "CT-RISK-01",
+          "owner": "qcsd-risk",
+          "severity": "CRITICAL",
+          "classification": "structural",
+          "requirement": "FR-6. Привязать создание нового checkout к версии оферты, показанной и принятой в конкретном действии пользователя. Указать контракт ссылочного идентификатора/ревизии и запись account, версии/digest и времени. Старая форма при смене версии требует актуального ознакомления и явного повторного действия, не создаёт intent и не вызывает провайдера; повтор ранее принятого intent сохраняет старую редакцию.",
+          "scope": [
+            "features/customer-trust/03_adr/002-persist-checkout-proof.md",
+            "features/customer-trust/03_adr/003-isolate-support-and-record-acceptance.md",
+            "features/customer-trust/05_architecture.md"
+          ],
+          "evidence": "В 05 POST /api/checkout принимает только plan и idempotency_key. ADR-003 связывает явное действие с версией в intent, но без привязки показанной редакции к действию checkout сервер при публикации V2 после показа V1 запишет V2. Для signup механизм сверки уже описан."
+        },
+        {
+          "id": "CT-RISK-02",
+          "owner": "qcsd-risk",
+          "severity": "HIGH",
+          "classification": "structural",
+          "requirement": "FR-10/NFR-2. Описать диспетчеризацию purchase outbox со стабильными body/key, фиксируемым до сети началом первой попытки, конечными численными пределами партии, повторов и частоты, lease/CAS и разрешёнными переходами для disabled, transient, permanent, timeout, потери lease/процесса и исчерпанного окна. Сценарий с двумя воркерами, сетевой неопределённостью и перезапуском доказывает отсутствие новых ключей, отправки за пределом окна и горячего цикла. Legacy без снимка допускает подтверждённый grant по своим правилам и ноль доставок.",
+          "scope": [
+            "features/customer-trust/03_adr/002-persist-checkout-proof.md",
+            "features/customer-trust/04_domain_model.md",
+            "features/customer-trust/05_architecture.md"
+          ],
+          "evidence": "ADR-002 фиксирует 24 часа, batch и стабильный ключ, 05 добавляет lease/CAS; отсутствуют ограничение числа/ритма попыток на запись и точка отсчёта окна именно для почты. Из 04 не следует, что делать с definitive failed и с падением после принятия Resend до commit результата."
+        },
+        {
+          "id": "CT-RISK-03",
+          "owner": "qcsd-risk",
+          "severity": "HIGH",
+          "classification": "structural",
+          "requirement": "FR-9. Описать наблюдаемую смену authority для уже открытого виджета в другой вкладке и при возврате из background/bfcache. При logout, reset или входе другого аккаунта скрывать старую историю и отменять старые callback до восстановления отображения и запроса истории после проверки текущего аккаунта. Зафиксировать предел обнаружения внешнего отзыва и двухконтекстный тест с задержанным ответом SDK. Обычный hide/reopen одного подтверждённого владельца сохраняет его историю.",
+          "scope": [
+            "features/customer-trust/03_adr/003-isolate-support-and-record-acceptance.md",
+            "features/customer-trust/05_architecture.md"
+          ],
+          "evidence": "ADR-003 определяет exp 60 секунд, hide-only и очистку при logout. В 05 экземпляр ограничен вкладкой. Истечение JWT выдачи не прекращает уже открытую сессию SDK, а смена account cookie может произойти в другой вкладке."
+        },
+        {
+          "id": "CT-RISK-04",
+          "owner": "qcsd-risk",
+          "severity": "HIGH",
+          "classification": "structural",
+          "requirement": "NFR-3/FR-1. Определить исполнимую матрицу удаления по носителям для email proof/кандидата, immutable receipt, outbox/сохранённого тела, записей принятия и истории в отдельном Libredesk. Указать инициирующее событие, действие/обезличивание, сохраняемый финансовый минимум, границу удаления внешним оператором и незаполненные сведения для публикации. Сценарий удаления с pending/leased письмом и поздним webhook проверяет все локальные копии и отсутствие новых отправок или восстановления ПДн.",
+          "scope": [
+            "features/customer-trust/04_domain_model.md",
+            "features/customer-trust/05_architecture.md",
+            "features/customer-trust/03_adr/003-isolate-support-and-record-acceptance.md"
+          ],
+          "evidence": "05 ссылается на «матрицу», в 04 только общая граница операторской переписки. 02_reuse_inventory фиксирует ещё открытые сроки и процесс обращений. Снимок и outbox независимо могут содержать тот же адрес, archived legal evidence и удалённая история имеют иной жизненный цикл."
+        }
+      ],
+      "verifications": [
+        {
+          "id": "CT-RISK-01",
+          "revision": "3bdcaeed42340b3ee1f8050f3a132f453ae8ad24787d4ac5c489498753b70283",
+          "classification": "structural",
+          "evidence": "ADR-002 § Редакция и 05 API, сценарий OpenSpec billing V1/V2. Сервер получает ссылку offer_version, для новой покупки сверяет действующую редакцию, пишет account, server digest/time и снимок атомарно, 409 до записи и внешнего POST ведёт к новому явному действию. Повтор по существующему ключу сверяется с исходным intent и не создаёт принятия V2.",
+          "implementationVerified": true
+        },
+        {
+          "id": "CT-RISK-02",
+          "revision": "3bdcaeed42340b3ee1f8050f3a132f453ae8ad24787d4ac5c489498753b70283",
+          "classification": "structural",
+          "evidence": "ADR-002 и 05 §§ Возобновляемая доставка, Стирание. Партия 5 раз в 60 с, lease 30 с, допуск с first_send_at по DB-часам до HTTP, максимум 5 исходных payload/key с паузами 1/5/30/120 мин, запрет после +23 ч 50 мин. Disabled не расходует попытку, не начатые за 7 дней на сверку. Перечислены постоянный отказ, transient, неизвестный исход, смерть worker и CAS по поколению. Проверка с двумя worker/барьерами и legacy bound/unbound отдельно от логической доставки.",
+          "implementationVerified": true
+        },
+        {
+          "id": "CT-RISK-03",
+          "revision": "3bdcaeed42340b3ee1f8050f3a132f453ae8ad24787d4ac5c489498753b70283",
+          "classification": "structural",
+          "evidence": "ADR-003, 05 § Повторная проверка допуска виджета и сценарий двух контекстов OpenSpec support. BroadcastChannel/storage сообщают о смене полномочий. Уход в background/pagehide скрывает и отменяет старые callbacks. До отображения на focus/pageshow/bfcache требуется текущая authority, переход аккаунта сбрасывает identity до чтения истории; тот же аккаунт может повторно открыть свой диалог. Для работающего видимого окна задано 15+2 с. TTL JWT 60 с не определяет прекращение vendor session, фильтрация реального inbox остаётся проверкой при отложенной активации.",
+          "implementationVerified": true
+        },
+        {
+          "id": "CT-RISK-04",
+          "revision": "3bdcaeed42340b3ee1f8050f3a132f453ae8ad24787d4ac5c489498753b70283",
+          "classification": "structural",
+          "evidence": "05 § Стирание и граница начатой доставки, 04 и OpenSpec legal. По каждой копии зафиксированы действия при erasing и завершении: отзыв/очистка proof, снятие связи с acceptance и сохранение публичных версий, очистка чека, инвалидирование lease и recipient/body, сохранение указанного минимального финансового следа. Поздний webhook не создаёт заново снимок, CAS не восстанавливает payload. Указаны предпосылки для публикации сроков/контактов и внешний маршрут обращений по данным, отдельно от квитанции локального стирания. Сценарий различает события до и после допуска к сети.",
+          "implementationVerified": true
+        }
+      ],
+      "newRisks": {
+        "assessment": "Дополнительных серьёзных условий после проверки дельты не выявлено.",
+        "evidence": "Учтены допуск до начала удаления и поздний сетевой результат, отказ подтверждения кандидата, задержка обнаружения стороннего отзыва и необходимость реального подтверждения разделения inbox. Остаточные ограничения непосредственно отражены в проектах проверок и границах публичных утверждений. Новых условий не выявлено.",
+        "conditions": []
+      },
+      "authorAssessmentChecked": true,
+      "deltaVerification": {
+        "classification": "structural",
+        "evidence": "Сверены FR/NFR, три ADR, 04/05, shift-left, обе диаграммы и четыре OpenSpec-контракта с авторской дельтой. Сохранены общая реакция forgot и отзыв proof, проверка текущего email при новом checkout, цена/ранг 990/4 900 ₽, сверка старых intent. Хэш исходного 02_research совпал с описанным первоначальным снимком. Публичные полномочия оператора отделены от фактического подключения каналов.",
+        "implementationVerified": true
+      }
+    }
+  ]
+}

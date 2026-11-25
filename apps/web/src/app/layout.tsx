@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import localFont from 'next/font/local';
 import './globals.css';
+import { TrustSiteFooter } from './TrustSiteFooter';
 import { THEME_COLOR } from '../lib/theme';
 import { requestTheme } from './theme-server';
 // Onest (OFL-1.1, FR-LOOK-009) самохостингом из пакета @fontsource-variable/onest 5.3.1 — без сети на сборке.
@@ -21,5 +22,5 @@ export async function generateViewport(): Promise<Viewport> {
 }
 export default async function Layout({ children }: { children: ReactNode }) {
   const theme = await requestTheme();
-  return <html lang="ru" data-theme={theme} className={`${onestCyrillic.variable} ${onestLatin.variable}`}><body>{children}</body></html>;
+  return <html lang="ru" data-theme={theme} className={`${onestCyrillic.variable} ${onestLatin.variable}`}><body>{children}<TrustSiteFooter /></body></html>;
 }

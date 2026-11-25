@@ -1,6 +1,8 @@
 // из N5: projects/05-podcast-clips-opus/apps/web/src/server/auth-handler.ts — адаптировано: cookie
 // __Host-n6_session, ответы в форме API Contracts N6 ({ data } | { error: { code, message } }),
 // адрес клиента из одного значения XFF, записанного дверью (без trustedProxyHops).
+import { readTrustDocument } from '../lib/trust-legal-catalog';
+import { readJsonBody } from './preview-session';
 import { z } from 'zod';
 import { type AuthService, LOGIN_FAILURE, SESSION_TTL_SECONDS } from './auth';
 import { clientIp, ipPrefix } from './ip';
@@ -13,7 +15,8 @@ const credentials = {
 const inputSchema = z.object(credentials).strict();
 // Регистрация принимает код партнёра (partner-and-studio, FR-PARTNER-001): пустая строка — «кода нет», форма кода проверяется
 // хранилищем (неверный — ошибка поля, без отката к cookie). Вход поле кода не принимает.
-const registerSchema = z.object({ ...credentials, partner_code: z.string().max(60).optional() }).strict();
+const agreement = z.object({ accepted: z.literal(true), version: z.string().min(1).max(80) }).strict();
+const registerSchema = z.object({ ...credentials, terms: agreement, consent: agreement, partner_code: z.string().max(60).optional() }).strict();
 export const COOKIE_NAME = '__Host-n6_session';
 const MAX_BODY_BYTES = 4096;
 function json(body: object, status = 200, cookies: string | string[] = []): Response {
@@ -63,29 +66,30 @@ export function createAuthHandler(action: 'login' | 'register' | 'logout', deps:
       if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) {
         return fail(422, 'invalid', 'Ожидается JSON с почтой и паролем');
       }
-      // Ограничение потока действительно и при отсутствии/подделке Content-Length.
-      const reader = request.body?.getReader();
-      if (!reader) return fail(422, 'invalid', 'Укажите почту и пароль');
-      let size = 0;
-      const chunks: Uint8Array[] = [];
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        size += value.byteLength;
-        if (size > MAX_BODY_BYTES) { await reader.cancel(); return fail(413, 'too_large', 'Тело запроса слишком велико'); }
-        chunks.push(value);
+      const read = await readJsonBody(request, MAX_BODY_BYTES);
+      if (!read.ok) return read.code === 'too_large' ? fail(413,'too_large','Тело запроса слишком велико') : fail(422,'invalid','Непригодный JSON');
+      const body = read.body;
+      const registration = action === 'register' ? registerSchema.safeParse(body) : null;
+      const parsed = registration ?? inputSchema.safeParse(body);
+      if (!parsed.success) {
+        if (registration && !registration.success && registration.error.issues.some(i => i.path[0] === 'terms' || i.path[0] === 'consent')) {
+          return fail(422, 'acceptance_required', 'Подтвердите условия использования и отдельное согласие на обработку данных');
+        }
+        return fail(422, 'invalid', 'Укажите корректную почту и пароль от 8 символов до 72 байт');
       }
-      let body: unknown;
-      try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); }
-      catch { return fail(422, 'invalid', 'Непригодный JSON'); }
-      const parsed = (action === 'register' ? registerSchema : inputSchema).safeParse(body);
-      if (!parsed.success) return fail(422, 'invalid', 'Укажите корректную почту и пароль от 8 символов до 72 байт');
+      const acceptance = registration?.success ? { terms: readTrustDocument('terms'), consent: readTrustDocument('consent') } : undefined;
+      if (registration?.success && acceptance && (registration.data.terms.version !== acceptance.terms.version ||
+          registration.data.consent.version !== acceptance.consent.version)) {
+        const { terms, consent } = acceptance;
+        return json({ error: { code: 'legal_version_changed', message: 'Редакция изменилась. Прочитайте обновлённый документ и подтвердите его ещё раз.' },
+          documents: { terms: {version: terms.version, path: terms.path}, consent: {version: consent.version, path: consent.path} } }, 409);
+      }
       const { email, password } = parsed.data;
       const rawCode = action === 'register' ? (parsed.data as { partner_code?: string }).partner_code : undefined;
       const explicit = rawCode?.trim() || null;
       const referral = action === 'register' ? deps.referralCode?.(request) ?? null : null;
       const token = action === 'register'
-        ? await deps.auth.registerWithCode(email, password, ipPrefix(ip), { explicit, cookie: referral })
+        ? await deps.auth.registerWithCode(email, password, ipPrefix(ip), { explicit, cookie: referral }, acceptance)
         : await deps.auth.login(email, password, ipPrefix(ip));
       // Регистрация отвечает null только на явный неверный код: ошибка поля, аккаунта нет, к cookie не откатываемся.
       if (!token) return action === 'register' ? json(INVALID_CODE, 422) : json(LOGIN_FAILURE, 401);
@@ -103,9 +107,16 @@ export function createAuthHandler(action: 'login' | 'register' | 'logout', deps:
         try { await deps.recordArrival(request, token); }
         catch { console.error('Авторизация: приход по бейджу не записан — регистрация выполнена без него'); }
       }
-      return json({ data: { ok: true, ...(preview ? { preview } : {}) } }, 200, cookies);
-    } catch (error) {
-      console.error('Авторизация: запрос не завершён; вход временно недоступен', error instanceof Error ? error.message : '');
+      const response = json({ data: { ok: true, ...(preview ? { preview } : {}) } }, 200, cookies);
+      if (preview) {
+        try {
+          const context = await deps.auth.claimContext(token);
+          if (context) response.headers.set('X-Sufler-Claim-Context', context);
+        } catch { /* A missing correlation hint does not invalidate authentication. */ }
+      }
+      return response;
+    } catch {
+      console.error('Авторизация: запрос не завершён; вход временно недоступен');
       return fail(503, 'unavailable', 'Вход временно недоступен. Повторите позже');
     }
   };

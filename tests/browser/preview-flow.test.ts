@@ -9,12 +9,14 @@ import { createElement, Fragment, type ReactElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { chromium, webkit, type Browser, type Page } from 'playwright';
 import { domRules, axeRule, textZoomRule, firstScreenRule, firstScreenSelectors, FIRST_SCREEN_VIEWPORTS } from '../../scripts/responsive/rules.mjs';
+import { mountOwnerChat, selectPreviousAnswer } from '../fixtures/sufler-source-journey';
 import { preflight } from '../../scripts/responsive/input.mjs';
 import { PreviewChat, PreviewProgress, type ChatMessage, type PreviewJobView } from '../../apps/web/src/app/preview/PreviewViews';
 import { PreviewStartForm } from '../../apps/web/src/app/preview/PreviewStart';
 import { SiteHeader } from '../../apps/web/src/app/SiteHeader';
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: () => {}, replace: () => {}, refresh: () => {} }) }));
 
+const engines = process.env.SUFLER_UI_ENGINES === 'chromium' ? { chromium } : { chromium, webkit };
 type Theme = 'dark' | 'light';
 const CSS = readFileSync('apps/web/src/app/globals.css', 'utf8');
 const ARTIFACTS = 'tests/artifacts/preview-flow/browser';
@@ -32,7 +34,7 @@ const MESSAGES: ChatMessage[] = [
   { kind: 'question', text: 'Есть ли парковка?' },
   { kind: 'unknown', text: 'Я отвечаю только по материалам сайта компании «Стоматология Улыбка» и не нашёл там ответа на этот вопрос. Напишите: +7 900 000-00-00' },
   { kind: 'question', text: 'А в субботу работаете?' },
-  { kind: 'refused', text: 'Бесплатный предпросмотр на сегодня исчерпан — зарегистрируйтесь, чтобы продолжить' },
+  { kind: 'refused', text: 'Достигнут суточный предел предпросмотра. Попробуйте завтра.' },
 ];
 const main = (child: ReactElement) => (theme: Theme) => createElement(Fragment, null, createElement(SiteHeader, { theme }),
   createElement('main', { className: 'center container' }, child));
@@ -53,7 +55,7 @@ const html = (name: string, theme: Theme) => `<!doctype html><html lang="ru" dat
 let server: Server;
 let base: string;
 beforeAll(async () => {
-  try { await preflight(['chromium', 'webkit']); }
+  try { await preflight(Object.keys(engines)); }
   catch (error) { throw new Error(`НЕ ВЫПОЛНЕНО: ${String(error)}`); }
   server = createServer((req, res) => {
     // Имена — из реестра PAGES: новая страница не может выпасть из сервера (и из прогона правил ниже) молча.
@@ -71,7 +73,7 @@ afterAll(async () => { if (server) await new Promise<void>((resolve, reject) => 
 const errors = (found: { severity: string; rule: string; axeRule?: string; selector: string; message: string }[]) =>
   found.filter(f => f.severity === 'error').map(f => `${f.rule}${f.axeRule ? '/' + f.axeRule : ''} ${f.selector}: ${f.message}`);
 
-for (const [engineName, engine] of Object.entries({ chromium, webkit })) describe(engineName, () => {
+for (const [engineName, engine] of Object.entries(engines)) describe(engineName, () => {
   let browser: Browser;
   beforeAll(async () => { browser = await engine.launch(); });
   afterAll(async () => { await browser?.close(); });
@@ -83,6 +85,11 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) describ
       await run(page);
     } finally { await context.close(); }
   }
+  for (const width of [390, 1440]) it(`цитата владельца видна до первого нажатия · ${width}`, () =>
+    open('empty', 'light', { width, height: 900 }, false, async page => {
+      await mountOwnerChat(page, 'preview');
+      await selectPreviousAnswer(page, '#preview-question');
+    }));
   for (const theme of ['dark', 'light'] as const) {
     // R9: момент ценности — поле вопроса в первом экране телефона, до прокрутки (FR-GROWTH-001, FR-PREVIEW-001).
     for (const { w, h } of FIRST_SCREEN_VIEWPORTS) it(`R9 / ${theme} ${w}x${h}: поле вопроса предпросмотра в первом экране`,

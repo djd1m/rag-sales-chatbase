@@ -1,0 +1,42 @@
+{
+  "addressed": [
+    "CT-T01",
+    "CT-T02",
+    "CT-T03",
+    "CT-RISK-01",
+    "CT-RISK-02",
+    "CT-RISK-03",
+    "CT-RISK-04",
+    "CTQ-01",
+    "CTQ-02",
+    "CTQ-03",
+    "CTQ-04",
+    "CTQ-05"
+  ],
+  "changedScope": [
+    "features/customer-trust/01_requirements.md",
+    "features/customer-trust/02_research.md",
+    "features/customer-trust/03.5-author-delta.md",
+    "features/customer-trust/03_adr/001-bind-email-actions-to-account.md",
+    "features/customer-trust/03_adr/002-persist-checkout-proof.md",
+    "features/customer-trust/03_adr/003-isolate-support-and-record-acceptance.md",
+    "features/customer-trust/03_shift_left.md",
+    "features/customer-trust/04_domain_model.md",
+    "features/customer-trust/05_architecture.md",
+    "features/customer-trust/diagrams/sequence-payment.mermaid",
+    "features/customer-trust/diagrams/sequence-support.mermaid",
+    "features/customer-trust/owner-authority.md",
+    "openspec/changes/customer-trust/specs/billing/verified-purchase/spec.md",
+    "openspec/changes/customer-trust/specs/identity/email-access/spec.md",
+    "openspec/changes/customer-trust/specs/legal/user-documents/spec.md",
+    "openspec/changes/customer-trust/specs/support/customer-help/spec.md"
+  ],
+  "classification": "structural",
+  "delta": "Проект связывает принятие с показанными редакциями, определяет полные пользовательские состояния verify/reset и сверки покупки, ограничивает outbox и его гонки со стиранием, проверяет межвкладочную идентичность, закрепляет локальный контур и измеримую сравнительную нагрузку.",
+  "evidence": "Трассировка всех 12 исходных условий в features/customer-trust/03.5-author-delta.md. SHA-256 сравнен со снимком e4dd58d963088a68457020c7cb0cd76816dd659deb5677b08094ea3e8b37b5ba. Обновлены четыре OpenSpec-контракта, strict validation passed. Реализация и тесты ещё не выполнялись. Координатор: 02_research.md добавлен при первоначальной подготовке host до initial independent review; unchanged since that review. Host сохраняет это добавление в pending changedPaths; оно явно включено для полной проверки дельты. SHA-256 0b32b19081873c80a7e266bdd31e598b2e1eda198d12cbe9300ba90a92554d4a.",
+  "newRisks": {
+    "assessment": "Новые компромиссы оценены, отдельные новые условия не выделены. Остаточные ограничения остаются в соответствующих исходных рисках и активационных предпосылках.",
+    "evidence": "Оценены дополнительный шаг открытия письма, неподтверждённый кандидат resend, нагрузка опроса authority, граница уже допущенного HTTP при erasure и фактическая фильтрация его внешней истории. Контрмеры, пределы и сценарии закреплены в ADR-001–003, 05_architecture и 03.5-author-delta.md.",
+    "conditions": []
+  }
+}

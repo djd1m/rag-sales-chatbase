@@ -53,6 +53,7 @@ label { display:block; font-size:0.9375rem; font-weight:500; }
 /* ── шапка ── */
 .navigation { display:flex; flex-wrap:wrap; align-items:center; column-gap:var(--space-2); min-height:var(--nav-h); padding:max(var(--space-4),env(safe-area-inset-top)) max(var(--space-4),env(safe-area-inset-right)) var(--space-4) max(var(--space-4),env(safe-area-inset-left)); border-bottom:0.0625rem solid var(--line); font-size:0.9375rem; }
 .navigation > :first-child { margin-right:auto; }
+.navigation a { flex:none; min-width:2.75rem; text-wrap:nowrap; }
 .navigation a:not(.brand) { display:inline-flex; align-items:center; min-height:2.75rem; padding-inline:var(--space-2); }
 .brand { display:inline-flex; align-items:center; gap:var(--space-2); min-height:2.75rem; font-size:1.25rem; font-weight:600; letter-spacing:-0.03em; text-decoration:none; }
 .brand span { display:grid; place-items:center; width:2rem; height:2rem; border-radius:var(--radius-control); background:var(--btn-bg); color:var(--btn-fg); font-size:1rem; }
@@ -230,7 +231,7 @@ code { overflow-wrap:anywhere; }
 @media(max-width:22.5rem) { .brand { font-size:1.125rem; } .navigation { font-size:0.875rem; } }
 @media(min-width:25rem) { .auth-card { padding:var(--space-8); } }
 @media(min-width:46rem) {
-  .navigation { padding-inline:max(var(--space-6),calc((100vw - 74rem)/2 + var(--space-4)),env(safe-area-inset-left)); column-gap:var(--space-4); }
+  .navigation { padding-inline:max(var(--space-6),calc((100% - 74rem)/2 + var(--space-4)),env(safe-area-inset-left)); column-gap:var(--space-4); }
   .hero { padding-block:var(--space-16); }
   .url-form .url-row { flex-direction:row; }
   .url-form button { width:auto; flex:none; }
@@ -246,3 +247,50 @@ code { overflow-wrap:anywhere; }
 @media(min-width:69.5rem) { .preview-grid { grid-template-columns:minmax(0,1fr) minmax(0,26rem); } .site-mock { order:-1; min-height:24rem; } .bot-grid { grid-template-columns:minmax(0,1fr) minmax(0,28rem); } }
 @media(min-width:69.5rem) { .steps { grid-template-columns:repeat(4,minmax(0,1fr)); } .section { padding-block:var(--space-16); } }
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important; } }
+
+/* Материал и образец ответа рядом на широком экране, форма первой на телефоне. */
+.hero { display:grid; gap:var(--space-6); align-items:center; }
+.hero-copy { min-width:0; }
+.hero h1 { max-width:17ch; }
+.hero .answer-card { width:100%; }
+.answer-card h2 { font-size:1.125rem; }
+.answer-card blockquote { margin-inline:0; padding-inline-start:var(--space-3); border-left:.1875rem solid var(--accent); }
+.source-alternative { display:inline-flex; align-items:center; min-height:2.75rem; }
+.source-choices [aria-current] { background:var(--btn-bg); border-color:var(--btn-bg); color:var(--btn-fg); }
+@media(min-width:46rem) {
+  .hero { grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr); gap:var(--space-8); }
+}
+@media(max-width:25rem) {
+  .hero { padding-block:var(--space-4); }
+  .hero h1 { font-size:clamp(1.875rem,8vw,2.25rem); line-height:1.09; margin:0; }
+  .hero .intro { font-size:1rem; margin-block:var(--space-3); }
+  .hero .url-form { margin-top:var(--space-3); }
+  .navigation { padding-block:var(--space-1); column-gap:var(--space-1); }
+}
+.cabinet-start { max-width:48rem; margin-bottom:var(--space-6); }
+.setup-steps { display:flex; flex-wrap:wrap; gap:var(--space-3); list-style:none; padding:0; }
+.setup-steps li { color:var(--muted); }
+.setup-steps li + li::before { content:'→'; margin-inline-end:var(--space-3); }
+.setup-steps [aria-current] { color:var(--accent); font-weight:600; }
+.chat-window { container-type:inline-size; }
+.source-select { display:block; margin-top:var(--space-2); text-align:start; max-width:100%; }
+.source-select[aria-pressed=true] { color:var(--accent); }
+.source-quote { min-width:0; background:var(--surface); }
+@container (min-width:32rem) {
+  .chat-answer-group:has(.source-quote) { grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:start; }
+}
+.owner-checks { min-width:0; padding:var(--space-4); margin:var(--space-4) 0; border:1px solid var(--line); border-radius:var(--radius-card); }
+.owner-checks legend { font-weight:600; padding-inline:var(--space-2); }
+.owner-checks label { display:flex; align-items:center; gap:var(--space-2); min-height:2.75rem; cursor:pointer; }
+.owner-checks p { margin-block-end:0; }
+.claim-control { min-width:0; max-width:100%; }
+.claim-control button[aria-disabled=true] { opacity:.55; cursor:wait; }
+.claim-control .chat-error { margin:var(--space-2) 0 0; }
+@media(max-width:45.99rem) { .aha .claim-control { width:100%; } }
+@media(min-width:69.5rem) {
+  .bot-grid { grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr); }
+}
+.auth-card a { display:inline-flex; align-items:center; min-height:2.75rem; }
+.auth-card label:has(input[type=checkbox]) { display:flex; align-items:center; min-height:2.75rem; gap:var(--space-2); }
+/* На телефоне тот же маршрут поддержки доступен в общем подвале. */
+@media(max-width:25rem) { .navigation a.support-nav-link { display:none; } }

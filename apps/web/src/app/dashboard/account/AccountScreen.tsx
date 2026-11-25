@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import type { ErasurePreview } from '@n6/db';
 import { formatRub } from '@n6/rag/commission';
+import { publishCustomerAuthChange } from '../../../lib/customer-auth-signal';
 import { errorOf, send } from '../../../lib/api-client';
 
 export function Consequences({ preview }: { preview: ErasurePreview }) {
@@ -32,7 +33,7 @@ export function AccountDeletionForm() {
     setBusy(true); setError(null);
     try {
       const { status, body } = await send('/api/account', 'DELETE', { confirm: form.get('confirm') === 'on', password: String(form.get('password') ?? '') });
-      if (status === 202) { window.location.assign('/account/erased'); return; }
+      if (status === 202) { publishCustomerAuthChange(); window.location.assign('/account/erased'); return; }
       const problem = errorOf(body);
       setError({ field: problem?.field, message: problem?.message ?? 'Не удалось запросить удаление. Повторите' });
     } catch { setError({ message: 'Нет связи с сервером. Повторите' }); }
@@ -56,6 +57,8 @@ export function AccountScreen({ preview }: { preview: ErasurePreview }) {
     <h1 id="erase-title">Удаление аккаунта</h1>
     <p className="notice danger-notice">Отменить удаление нельзя. Вход закроется сразу, данные сотрём не позже чем через 72 часа.</p>
     <Consequences preview={preview} />
+    <p>Удаление охватывает данные в Суфлёре. Начатая отправка письма может завершиться. У почтового сервиса, ЮKassa и службы поддержки могут остаться ранее переданные сведения и переписка.</p>
+    <p><a href="/support">Поддержка и контакты по вопросам данных</a></p>
     <AccountDeletionForm />
     <p><a className="button secondary" href="/dashboard">К ботам</a></p>
   </section>;

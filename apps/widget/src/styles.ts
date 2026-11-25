@@ -37,7 +37,7 @@ background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:
 .title{margin:0;flex:1;font-size:16px;font-weight:600;line-height:1.3;overflow-wrap:anywhere}
 .icon-btn{all:initial;box-sizing:border-box;width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--fg)}
 .icon-btn svg{width:20px;height:20px;display:block}
-.log{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px;margin:0;list-style:none}
+.log{flex:1;min-height:0;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px;margin:0;list-style:none}
 .msg{max-width:88%;padding:10px 12px;border-radius:14px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;line-height:1.45}
 .msg.bot{align-self:flex-start;background:var(--soft);color:var(--fg)}
 .msg.user{align-self:flex-end;background:var(--accent);color:var(--accent-fg)}
@@ -47,6 +47,10 @@ background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:
 .src p{margin:4px 0 8px;white-space:pre-wrap}
 .link{color:var(--fg);text-decoration:underline;display:inline-flex;align-items:center;min-height:44px}
 .warn{margin:0;padding:8px 16px;font-size:12px;color:var(--muted);border-top:1px solid var(--line)}
+.visitor-notice{padding:0 16px;font-size:12px;color:var(--muted);flex-shrink:0;max-height:32%;overflow:auto}
+.visitor-notice summary{min-height:44px;display:flex;align-items:center;cursor:pointer}
+.visitor-notice p{margin:0;overflow-wrap:anywhere}
+.visitor-notice summary:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
 .form{display:flex;gap:8px;padding:8px 16px 8px}
 .input{all:initial;box-sizing:border-box;flex:1;min-width:0;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;
 background:var(--bg);color:var(--fg);font-family:inherit;font-size:16px;line-height:1.3}

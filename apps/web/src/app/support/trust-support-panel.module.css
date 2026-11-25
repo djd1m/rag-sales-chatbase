@@ -1,0 +1,3 @@
+.conversation { min-width: 0; }
+.conversation > iframe { width: 100%; height: min(72dvh, 46rem); border: 0; }
+.conversation > iframe[hidden] { display: none; }

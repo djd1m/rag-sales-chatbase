@@ -1,0 +1,34 @@
+sequenceDiagram
+    actor Owner as Владелец сайта
+    participant UI as Preview или выбор PDF
+    participant Auth as Login и AuthForm
+    participant API as Действующий сервер Суфлёра
+    participant Cabinet as Защищённый кабинет
+    participant Tab as Одноразовый контекст вкладки
+    alt Явное сохранение вошедшим владельцем
+        Owner->>UI: Сохранить предпросмотр
+        UI->>API: POST /api/preview/[id]/claim
+        API-->>UI: Реальный исход и контекст проверенной сессии
+        UI->>Tab: После успеха сохранить проверенную пару
+        UI->>Cabinet: Открыть кабинет без флага результата в URL
+    else Сохранение предпросмотра гостем
+        Owner->>UI: Сохранить предпросмотр
+        UI->>Auth: Открыть действующий вход или регистрацию
+        Auth->>API: Войти и обработать возможный claim
+        API-->>Auth: Исход входа и контекст claim при наличии
+        Auth->>Tab: Сохранить фактическую пару при наличии
+        Auth->>Cabinet: Открыть обычный кабинет
+    else Вход для выбранного PDF
+        Owner->>Auth: Войти, next=/dashboard?source=pdf
+        Auth->>API: POST /api/auth/login или register
+        API->>API: Проверить сессию и штатно обработать возможный claim
+        API-->>Auth: Исход auth и контекст claim при наличии
+        Auth->>Tab: Сохранить фактическую пару при наличии
+        Auth->>Cabinet: Точный разрешённый PDF-переход
+        Cabinet->>API: Получить действительный список владельца
+        API-->>Cabinet: Боты, пустой список или ошибка
+        Cabinet->>Tab: Сверить контекст текущей сессии и потребить один раз
+        Cabinet-->>Owner: Показать подтверждённый исход и явный выбор
+        Owner->>Cabinet: Явно выбрать бота или создать в пределах плана
+        Cabinet-->>Owner: Открыть существующее поле source-pdf
+    end

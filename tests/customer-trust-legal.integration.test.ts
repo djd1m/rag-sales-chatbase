@@ -1,0 +1,51 @@
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { randomBytes } from 'node:crypto';
+import { createPool, type Pool } from '../packages/db/src/index';
+import { migrate } from '../packages/db/src/migrate';
+import { ensureTestDatabase } from '../scripts/test-db.mjs';
+import { readTrustDocument } from '../apps/web/src/lib/trust-legal-catalog';
+import { createAuthHandler } from '../apps/web/src/server/auth-handler';
+import { AuthService } from '../apps/web/src/server/auth';
+import { PgAuthStore } from '../apps/web/src/server/auth-store';
+
+const url = process.env.DATABASE_URL, origin = 'https://sufler.test';
+describe.skipIf(!url)('customer trust • legal', () => {
+  const schema = 'trust_legal_' + randomBytes(8).toString('hex');
+  let pool: Pool;
+  beforeAll(async () => {
+    if (!url || !new URL(url).pathname.endsWith('_test')) throw new Error('Нужна тестовая БД');
+    await ensureTestDatabase(url);
+    pool = createPool(url, schema);
+    await pool.query('CREATE SCHEMA ' + schema);
+    await migrate(pool);
+  });
+  afterAll(async () => { if (pool) { await pool.query('DROP SCHEMA ' + schema + ' CASCADE'); await pool.end(); } });
+  it('registration records two current legal versions only for the actual new account', async () => {
+    const auth = new AuthService(new PgAuthStore(pool), randomBytes(32).toString('hex'));
+    const handler = createAuthHandler('register', { auth, publicOrigin: origin, allowMutation: async () => true });
+    const send = (body: object) => handler(new Request(origin + '/api/auth/register', { method: 'POST', headers: { origin, 'x-forwarded-for': '192.0.2.1', 'content-type': 'application/json' }, body: JSON.stringify(body) }));
+    const email = 'legal@example.test', password = 'пароль-длинный';
+    const [terms, consent] = [readTrustDocument('terms'), readTrustDocument('consent')];
+    await pool.query(`INSERT INTO partner_code(code,"group") VALUES ('trust-partner','partner')`);
+    const payload = { email, password, partner_code: 'trust-partner', terms: { accepted: true, version: terms.version }, consent: { accepted: true, version: consent.version } };
+    expect((await send({ email, password })).status).toBe(422);
+    expect((await send({ ...payload, terms: { ...payload.terms, accepted: false } })).status).toBe(422);
+    expect((await send({ ...payload, consent: { ...payload.consent, version: 'earlier' } })).status).toBe(409);
+    expect((await pool.query('SELECT 1 FROM account')).rowCount).toBe(0);
+    const results = await Promise.all([send(payload), send(payload)]);
+    expect(results.map(r => r.status)).toEqual([200, 200]);
+    const rows = await pool.query('SELECT kind,version,digest,accepted_at FROM legal_acceptance ORDER BY kind');
+    expect(rows.rows).toEqual([consent, terms].map(d => ({ kind: d.kind, version: d.version, digest: d.digest, accepted_at: expect.any(Date) })));
+    expect((await pool.query('SELECT 1 FROM session')).rowCount).toBe(1);
+    expect((await pool.query("SELECT source,status FROM attribution")).rows).toEqual([{ source: 'code', status: 'pending' }]);
+    const actual = await Promise.all(results.map(r => auth.authenticate(r.headers.get('set-cookie')!.split(';')[0]!.split('=')[1]!)));
+    expect(actual.filter(Boolean)).toHaveLength(1);
+    expect(await auth.login(email, password, '192.0.2.0/24')).toBeTruthy();
+    await pool.query("ALTER TABLE legal_acceptance ADD CHECK(kind <> 'consent') NOT VALID");
+    expect((await send({ ...payload, email: 'rollback@example.test' })).status).toBe(503);
+    expect((await pool.query('SELECT 1 FROM account')).rowCount).toBe(1);
+    expect((await pool.query('SELECT 1 FROM legal_acceptance')).rowCount).toBe(2);
+    expect((await pool.query('SELECT 1 FROM session')).rowCount).toBe(2);
+    expect((await pool.query('SELECT 1 FROM attribution')).rowCount).toBe(1);
+  });
+});

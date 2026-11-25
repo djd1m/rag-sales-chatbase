@@ -14,6 +14,7 @@ type Payment = { id: string; status: 'pending' | 'succeeded' | 'canceled'; amoun
 export interface FakeYooKassa {
   apiBase: string;
   payments: Map<string, Payment>;
+  posts: Array<{ key: string; body: unknown }>;
   created: number;
   // Управление: 5xx на чтение платежа; подмена суммы в ответе перезапроса; платёж создаётся уже оплаченным.
   failReads: boolean;
@@ -42,7 +43,7 @@ export async function startFakeYooKassa(options: { test?: boolean } = {}): Promi
   const test = options.test ?? true;
   const byKey = new Map<string, string>();
   const state: Omit<FakeYooKassa, 'apiBase' | 'close'> = {
-    payments: new Map(), refunds: new Map(), created: 0, failReads: false, readAmountOverride: null,
+    payments: new Map(), posts: [], refunds: new Map(), created: 0, failReads: false, readAmountOverride: null,
     forgetIdempotence() { byKey.clear(); },
     pay(id) { const p = state.payments.get(id)!; p.status = 'succeeded'; p.paid = true; p.captured_at = stamp(); p.income_amount = { value: p.amount.value, currency: 'RUB' }; },
     cancel(id) { const p = state.payments.get(id)!; p.status = 'canceled'; },
@@ -61,11 +62,13 @@ export async function startFakeYooKassa(options: { test?: boolean } = {}): Promi
       const auth = req.headers.authorization ?? '';
       if (auth !== `Basic ${Buffer.from(`${SHOP_ID}:${SECRET}`).toString('base64')}`) return send(res, 401, { type: 'error', code: 'invalid_credentials' });
       const url = new URL(req.url ?? '/', 'http://fake');
+      if (req.method === 'GET' && url.pathname === '/me') return send(res, 200, { account_id: SHOP_ID, test, status: 'enabled' });
       if (req.method === 'POST' && url.pathname === '/payments') {
         const key = String(req.headers['idempotence-key'] ?? '');
+        const body = await readBody(req) as { amount: { value: string }; metadata: { order_id: string } };
+        state.posts.push({ key, body });
         const existing = byKey.get(key);
         if (existing) return send(res, 200, state.payments.get(existing));
-        const body = await readBody(req) as { amount: { value: string }; metadata: { order_id: string } };
         const id = randomUUID();
         const payment: Payment = { id, status: 'pending', amount: { value: body.amount.value, currency: 'RUB' }, paid: false, test,
           recipient: { account_id: SHOP_ID }, metadata: { order_id: body.metadata.order_id },

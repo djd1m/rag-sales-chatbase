@@ -36,7 +36,7 @@ describe('Перечень потолков — один источник', () =
     const names = [...block.matchAll(/^\s+(QUOTA_[A-Z_]+): \$\{(QUOTA_[A-Z_]+):\?/gm)].map((m) => { expect(m[1]).toBe(m[2]); return m[1]!; });
     expect(names.sort()).toEqual([...QUOTA_NAMES].sort());
     // web и worker-index подключают этот якорь
-    expect(compose.match(/<<: \[\*app-env, \*model-env, \*quota-env\]/g)).toHaveLength(2);
+    expect(compose.match(/<<: \[\*app-env, \*model-env, \*quota-env, \*mail-env\]/g)).toHaveLength(2);
   });
   it('.env.example объявляет все 14 со значениями канона', () => {
     const example = readFileSync('.env.example', 'utf8');

@@ -3,6 +3,22 @@
 export function readEnvironment() {
   return {
     NODE_ENV: process.env.NODE_ENV,
+    // customer-trust: explicit service-scoped environment; secrets never projected to clients.
+    N6_MAIL_MODE: process.env.N6_MAIL_MODE,
+    N6_RESEND_API_KEY: process.env.N6_RESEND_API_KEY,
+    N6_MAIL_FROM: process.env.N6_MAIL_FROM,
+    N6_SUPPORT_MODE: process.env.N6_SUPPORT_MODE,
+    N6_SUPPORT_BASE_URL: process.env.N6_SUPPORT_BASE_URL,
+    N6_SUPPORT_INBOX_ID: process.env.N6_SUPPORT_INBOX_ID,
+    N6_SUPPORT_JWT_SECRET: process.env.N6_SUPPORT_JWT_SECRET,
+    N6_SUPPORT_CONTACT_EMAIL: process.env.N6_SUPPORT_CONTACT_EMAIL,
+    N6_PRIVACY_CONTACT_EMAIL: process.env.N6_PRIVACY_CONTACT_EMAIL,
+    N6_YOOKASSA_RECEIPTS_MODE: process.env.N6_YOOKASSA_RECEIPTS_MODE,
+    N6_YOOKASSA_RECEIPT_VAT_CODE: process.env.N6_YOOKASSA_RECEIPT_VAT_CODE,
+    N6_YOOKASSA_RECEIPT_PAYMENT_SUBJECT: process.env.N6_YOOKASSA_RECEIPT_PAYMENT_SUBJECT,
+    N6_YOOKASSA_RECEIPT_PAYMENT_MODE: process.env.N6_YOOKASSA_RECEIPT_PAYMENT_MODE,
+    N6_YOOKASSA_RECEIPT_TAX_SYSTEM_CODE: process.env.N6_YOOKASSA_RECEIPT_TAX_SYSTEM_CODE,
+
     N6_PUBLIC_ORIGIN: process.env.N6_PUBLIC_ORIGIN,
     DATABASE_URL: process.env.DATABASE_URL,
     REDIS_URL: process.env.REDIS_URL,

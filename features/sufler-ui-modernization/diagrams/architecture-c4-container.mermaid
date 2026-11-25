@@ -1,0 +1,19 @@
+flowchart TB
+    Browser["Браузер владельца<br/>React и состояние вкладки"]
+    Site["Внешний сайт<br/>Разрешённый origin"]
+    subgraph Runtime["Суфлёр, текущий runtime"]
+        Proxy["proxy<br/>Caddy"]
+        Web["web<br/>Next.js SSR, API, проверка сессии"]
+        DB[("db<br/>Postgres и pgvector")]
+        Queue[("redis<br/>Доставка BullMQ")]
+        Worker["worker-index<br/>Чтение источника и индексирование"]
+        Migrate["migrate<br/>Одноразовое применение схемы"]
+    end
+    Browser -->|"HTTPS, форма и API"| Proxy
+    Site -->|"HTTPS, виджет"| Proxy
+    Proxy -->|"Пропускает штатные запросы"| Web
+    Web -->|"Сессии, боты, задания, лимиты и ответы"| DB
+    Web -->|"Доставляет задачу"| Queue
+    Worker -->|"Получает задачу"| Queue
+    Worker -->|"Сохраняет прогресс и индекс"| DB
+    Migrate -->|"Применяет схему"| DB

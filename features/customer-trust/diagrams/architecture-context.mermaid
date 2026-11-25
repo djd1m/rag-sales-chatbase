@@ -1,0 +1,17 @@
+flowchart LR
+    Guest["Гость"]
+    Owner["Владелец сайта"]
+    Visitor["Посетитель сайта"]
+    Operator["Оператор поддержки"]
+    Sufler["Суфлёр"]
+    Shop["ЮKassa"]
+    Mail["Resend"]
+    Support["Libredesk, inbox Суфлёра"]
+    Guest -->|Документы и восстановление| Sufler
+    Owner -->|Аккаунт, оплата и поддержка| Sufler
+    Visitor -->|Ассистент и уведомление| Sufler
+    Sufler -->|Проверяемый платёж и чек| Shop
+    Shop -->|Уведомление и канонический статус| Sufler
+    Sufler -->|Транзакционные письма| Mail
+    Sufler -->|Допуск виджета после явного действия| Support
+    Operator -->|Обращения Суфлёра| Support

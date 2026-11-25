@@ -7,6 +7,7 @@ import { ARRIVAL } from '../packages/db/src/growth';
 import { ARRIVAL_COOKIE, arrivalCookie, arrivalSetCookie, arrivalSlug, parseArrival, readArrivalCookie } from '../apps/web/src/lib/arrival';
 import { badgeHref } from '../apps/web/src/lib/badge-required';
 import { createArrivalRecorder } from '../apps/web/src/server/route';
+import { readTrustDocument } from '../apps/web/src/lib/trust-legal-catalog';
 import { createAuthHandler } from '../apps/web/src/server/auth-handler';
 import type { AuthService } from '../apps/web/src/server/auth';
 import { publicPageMetadata } from '../apps/web/src/app/b/[slug]/PublicPageView';
@@ -67,7 +68,7 @@ describe('приход по бейджу / демо-странице (FR-GROWTH-
     const calls: string[] = [];
     const run = (action: 'login' | 'register', fail = false) => createAuthHandler(action, { auth, publicOrigin: PUBLIC, allowMutation: async () => true,
       recordArrival: async () => { calls.push(action); if (fail) throw new Error('БД недоступна'); } })(new Request(`${PUBLIC}/api/auth/${action}`, {
-      method: 'POST', headers: { 'content-type': 'application/json', origin: PUBLIC, 'x-forwarded-for': '93.184.216.9' }, body: JSON.stringify({ email: 'u@example.org', password: 'long-password' }) }));
+      method: 'POST', headers: { 'content-type': 'application/json', origin: PUBLIC, 'x-forwarded-for': '93.184.216.9' }, body: JSON.stringify({ email: 'u@example.org', password: 'long-password', ...(action === 'register' ? {terms:{accepted:true,version:readTrustDocument('terms').version},consent:{accepted:true,version:readTrustDocument('consent').version}} : {}) }) }));
     expect((await run('login')).status).toBe(200);
     expect((await run('register')).status).toBe(200);
     expect((await run('register', true)).status).toBe(200);

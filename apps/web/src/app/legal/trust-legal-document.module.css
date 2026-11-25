@@ -1,0 +1,12 @@
+.document {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 4vw, 3rem);
+  overflow-wrap: anywhere;
+}
+.document h1 { font-size: clamp(1.8rem, 5vw, 3rem); line-height: 1.16; }
+.document h2 { margin: 2rem 0 .6rem; font-size: clamp(1.25rem, 3vw, 1.65rem); }
+.document p { line-height: 1.65; }
+.edition { color: var(--muted); }
+.document nav { border-top: 1px solid var(--line); margin-top: 2rem; padding-top: 1rem; display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; }
+.document a:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }

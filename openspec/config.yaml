@@ -1,0 +1,11 @@
+schema: spec-driven
+
+context: |
+  Суфлёр. Проектные идентификаторы и ограничения зафиксированы в docs/canon.md.
+  Значимые решения оформляются по feature-adr с Confirmation в features/<slug>/03_adr/.
+  Перед реализацией проверьте K1 и K2 по tools/feature-process/README.md.
+rules:
+  design:
+    - Свяжите значимые решения с ADR и названными проверками Confirmation.
+  tasks:
+    - Свяжите задачу с проверяемым сценарием и соответствующим планом feature-adr.

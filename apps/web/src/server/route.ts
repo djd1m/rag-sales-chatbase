@@ -1,8 +1,10 @@
 // из N5: projects/05-podcast-clips-opus/apps/web/src/server/route.ts — без trustedProxyHops; + ClaimPreview при регистрации/входе (preview-flow);
 // + приход по бейджу при регистрации (public-page-and-summary)
+import { CustomerEmailProofStore } from '@n6/db';
+import { createCustomerEmailActionHandler } from './customer-email-actions';
 import { getRuntime } from './runtime';
 import { createAuthHandler } from './auth-handler';
-import { allowMutation } from './rate-limit';
+import { allowCustomerEmailIssue, allowMutation } from './rate-limit';
 import { claimPreview, recordArrival } from '@n6/db';
 import { createRegistrationClaim } from './preview-handler';
 import { readArrivalCookie } from '../lib/arrival';
@@ -19,9 +21,17 @@ export function createArrivalRecorder(deps: { authenticate: (token: string) => P
   };
 }
 
-export function authRoute(action: 'login' | 'register' | 'logout') {
+export function authRoute(action: 'login' | 'register' | 'logout' | 'send' | 'confirm' | 'forgot' | 'reset') {
   return async (request: Request): Promise<Response> => {
     const runtime = getRuntime();
+    if (action === 'send' || action === 'confirm' || action === 'forgot' || action === 'reset') {
+      const secret = runtime.config.sessionSecret;
+      return createCustomerEmailActionHandler(action, {
+        auth: runtime.auth, proofs: new CustomerEmailProofStore(runtime.pool), mail: runtime.mail,
+        publicOrigin: runtime.config.publicOrigin, secret, allowMutation: ip => allowMutation(runtime.redis,ip,secret),
+        allowIssue: dimensions => allowCustomerEmailIssue(runtime.redis,secret,dimensions),
+      })(request);
+    }
     // Предпросмотр сохраняется при регистрации и входе (preview-flow); выход — без него.
     const claim = action === 'logout' ? undefined : createRegistrationClaim({ secret: runtime.config.sessionSecret,
       authenticate: (token) => runtime.auth.authenticate(token), claim: (input) => claimPreview(runtime.pool, input) });

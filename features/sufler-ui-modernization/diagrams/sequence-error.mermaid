@@ -1,0 +1,31 @@
+sequenceDiagram
+    actor Owner as Владелец сайта
+    participant View as PreviewScreen
+    participant API as Действующий web API
+    participant Start as PreviewStart
+    participant Tab as Хранилище вкладки
+    View->>API: GET /api/preview/[id]
+    alt Сайт запретил чтение или текст отсутствует
+        API-->>View: failed с известной причиной
+        View-->>Owner: Выбрать PDF или изменить адрес
+        alt Изменить адрес
+            Owner->>Start: Открыть /preview?retry=jobId
+            Start->>Tab: Получить свежий безопасный корневой origin для jobId
+            Tab-->>Start: Совпавший origin или пустое значение
+            Start-->>Owner: Поле ввода готово
+            Note over Owner,Start: Повтор запускается после явной отправки
+        else Выбрать PDF
+            Owner->>Start: Открыть /preview?source=pdf
+            Start-->>Owner: Продолжение к защищённому кабинету через вход
+        end
+    else Недоступность чтения или done с site null
+        API-->>View: 503, транспортный отказ или done без сайта
+        View-->>Owner: Отдельное состояние с действием проверки
+        Owner->>View: Проверить состояние
+        View->>API: Только GET для того же jobId
+        API-->>View: Текущее состояние
+        Note over View,API: Сеть и done без сайта не выглядят как активное чтение
+    else Предпросмотр недоступен
+        API-->>View: 404
+        View-->>Owner: Остановить опрос и предложить новый старт
+    end

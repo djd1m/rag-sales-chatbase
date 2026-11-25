@@ -1,4 +1,4 @@
-// GET /api/checkout/{intent_id} — состояние оплаты для экрана возврата (pending | succeeded | canceled).
+// GET /api/checkout/{intent_id} — состояние оплаты для экрана возврата (pending | succeeded | canceled | reconciliation_required).
 import { getBillingDependencies } from '../../../../server/billing-runtime';
 import { createCheckoutStatusHandler } from '../../../../server/billing-handler';
 export const runtime = 'nodejs';

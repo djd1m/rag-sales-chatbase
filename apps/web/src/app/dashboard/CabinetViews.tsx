@@ -2,6 +2,7 @@
 // состояния и запросов: ту же разметку рендерит браузерный набор прибора (tests/browser/bot-cabinet.test.ts),
 // состояние и запросы — BotListScreen / BotScreen. Написано заново (ADR-016); классы и токены — design-shell и
 // preview-flow (globals.css). Лента стадий — адаптация N5 (lib/source-ribbon.ts).
+import { OwnerAnswerSource, OwnerChecks } from '../OwnerAnswerSource';
 import type { ReactNode } from 'react';
 import { TEXT_MAX_BYTES } from '@n6/rag/constants';
 import { ribbonOf, STEP_STATE_TEXT, type RibbonJob } from '../../lib/source-ribbon';
@@ -81,18 +82,19 @@ export function BotForm(p: BotFormProps) {
   </form>;
 }
 
-export function BotListSection({ list, create }: { list: BotListView; create: ReactNode }) {
+export function BotListSection({ list, create, pdf = false }: { list: BotListView; create: ReactNode; pdf?: boolean }) {
   const canCreate = list.bots.length < list.limit;
   return <>
     <div className="cabinet-head"><h1>Мои боты</h1>
       <p className="muted plan-line">План: <strong>{PLAN_TITLE[list.plan]}</strong> · ботов {list.bots.length} из {list.limit}</p></div>
+    {pdf && <p className="notice">Выберите бота для загрузки PDF{canCreate ? ' или создайте нового' : ''}. До 10 МБ и 100 страниц, с текстовым слоем.</p>}
     <ul className="bot-list" aria-label="Боты">{list.bots.map((bot) => <li key={bot.bot_id} className="card bot-card stack">
       <h2 className="bot-card-title"><a href={`/dashboard/bots/${bot.bot_id}`}>{bot.company_name}</a></h2>
       <p className="muted">Источников: {bot.sources} · готово {bot.sources_ready}{bot.sources_failed ? ` · с отказом ${bot.sources_failed}` : ''} · доменов: {bot.origins}</p>
       {bot.contact_set
         ? <p className="status-line"><span className="accent-text">●</span> Контакт для «не знаю» указан</p>
         : <p className="status-line warn-line">Нет контакта для «не знаю» — код установки не выдаётся</p>}
-      <p className="cluster"><a className="button" href={`/dashboard/bots/${bot.bot_id}`}>Открыть</a>
+      <p className="cluster"><a className="button" href={`/dashboard/bots/${bot.bot_id}${pdf ? '#source-pdf' : ''}`}>{pdf ? `Загрузить PDF для «${bot.company_name}»` : 'Открыть'}</a>
         <a className="button secondary" href={`/dashboard/bots/${bot.bot_id}/install`}>Установка</a></p>
     </li>)}</ul>
     {canCreate
@@ -188,30 +190,16 @@ export interface SourceChipView { title: string; url: string | null; excerpt: st
 export type OwnerMessage =
   | { kind: 'question'; text: string }
   | { kind: 'answered'; text: string; source: SourceChipView }
-  | { kind: 'unknown'; text: string }
+  | { kind: 'unknown'; text: string; contact?: string | null }
+  | { kind: 'small_talk'; text: string }
   | { kind: 'refused'; text: string };
-const safeHref = (url: string | null) => (url && /^https?:\/\//i.test(url) ? url : null);
-function OwnerMessageItem({ message }: { message: OwnerMessage }) {
-  if (message.kind === 'question') return <li className="chat-question">{message.text}</li>;
-  if (message.kind === 'refused') return <li className="chat-answer chat-refused"><span role="alert">{message.text}</span></li>;
-  if (message.kind === 'unknown') return <li className="chat-answer">{message.text}</li>;
-  const href = safeHref(message.source.url);
-  return <li className="chat-answer-group">
-    <div className="chat-answer">{message.text}</div>
-    {/* Владельцу — развёрнутая цитата (FR-BOT-001: «с развёрнутыми цитатами»). */}
-    <details className="source-quote" open>
-      <summary><span>Источник:</span> <strong>{message.source.title}</strong></summary>
-      <blockquote>{message.source.excerpt}</blockquote>
-      {href && <a href={href} target="_blank" rel="noopener nofollow noreferrer">Открыть страницу ↗</a>}
-    </details>
-  </li>;
-}
-export function OwnerChat(p: { companyName: string; messages: OwnerMessage[]; draft: string; busy: boolean; error: string; ready: boolean;
+export function OwnerChat(p: { companyName: string; messages: OwnerMessage[]; draft: string; busy: boolean; error: string; ready: boolean; contact?: string; botId?: string;
   onDraft: (value: string) => void; onAsk: () => void }) {
   return <div className="chat-window" role="group" aria-label={`Тестовый чат бота ${p.companyName}`}>
     <p className="chat-title"><strong>Проверка бота</strong> <span className="muted">— так ответит посетитель</span></p>
     {!p.ready && <p className="muted">Пока ни один источник не готов, бот на всё ответит «не знаю».</p>}
-    {p.messages.length > 0 && <ul className="chat-log" aria-live="polite">{p.messages.map((m, i) => <OwnerMessageItem key={i} message={m} />)}</ul>}
+    <OwnerAnswerSource messages={p.messages} contact={p.contact}
+      onMissingContact={<p><a className="source-alternative" href="#settings-title">Указать контакт для клиента</a></p>} />
     <form className="chat-form" onSubmit={(e) => { e.preventDefault(); p.onAsk(); }}>
       <label htmlFor="owner-question" className="visually-hidden">Вопрос боту</label>
       <input id="owner-question" name="question" type="text" autoComplete="off" maxLength={500} placeholder="Например: сколько стоит доставка?"
@@ -220,5 +208,7 @@ export function OwnerChat(p: { companyName: string; messages: OwnerMessage[]; dr
     </form>
     {p.error && <p role="alert" className="chat-error">{p.error}</p>}
     <p className="chat-foot muted">Тестовые вопросы расходуют суточный лимит ответов бота.</p>
+    <OwnerChecks />
+    {p.botId && p.messages.some(m => m.kind === 'answered') && <p><a className="button secondary" href={`/dashboard/bots/${p.botId}/install`}>Перейти к установке</a></p>}
   </div>;
 }

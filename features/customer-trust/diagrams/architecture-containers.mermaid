@@ -1,0 +1,27 @@
+flowchart TB
+    Browser["Браузер"]
+    Edge["Внешний Caddy"]
+    Shop["ЮKassa"]
+    Mail["Resend"]
+    Support["Libredesk, выделенный inbox"]
+    subgraph Project["Сеть Суфлёра"]
+        Proxy["Дверь Caddy"]
+        Web["Next.js web"]
+        Worker["worker-index и watchdog"]
+        PG[("PostgreSQL")]
+        Redis[("Redis")]
+        Migrate["Одноразовый migrate"]
+        Proxy --> Web
+        Web --> PG
+        Web --> Redis
+        Worker --> PG
+        Worker --> Redis
+        Migrate --> PG
+    end
+    Browser --> Edge
+    Edge --> Proxy
+    Shop -->|Webhook| Edge
+    Web -->|HTTPS Checkout и GET| Shop
+    Web -->|Почта аккаунта| Mail
+    Worker -->|Письмо о покупке| Mail
+    Browser -->|Виджет после явного действия| Support

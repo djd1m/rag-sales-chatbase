@@ -6,6 +6,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { PLAN_PRICE_MINOR, formatRubles } from '../packages/rag/src/constants';
 import { parseSetPlanArgs } from '../packages/db/src/ops-set-plan';
+import { createYooKassaProvider } from '../apps/web/src/server/payments/yookassa';
 import { assertPaymentsEnv, selectPaymentProvider } from '../apps/web/src/server/payments/config';
 import { verifyYooKassaOrigin } from '../apps/web/src/server/payments/origin';
 import { PaymentProviderUnavailable, PaymentVerificationError, type PaymentProvider } from '../apps/web/src/server/payments/provider';
@@ -28,6 +29,42 @@ describe('режим оплаты (honest-configuration, AC-12)', () => {
   it('fake разрешён вне production и запрещён в production', () => {
     expect(assertPaymentsEnv({ N6_PAYMENTS_MODE: 'fake', NODE_ENV: 'test' })).toBe('fake');
     expect(() => assertPaymentsEnv({ N6_PAYMENTS_MODE: 'fake', NODE_ENV: 'production' })).toThrow(/production/);
+  });
+  it('fiscal profile gates new purchases without disabling historical webhook verification', () => {
+    const env = {
+      ...LIVE, N6_YOOKASSA_RECEIPTS_MODE: 'yookassa', N6_YOOKASSA_RECEIPT_VAT_CODE: '1',
+      N6_YOOKASSA_RECEIPT_PAYMENT_SUBJECT: 'service', N6_YOOKASSA_RECEIPT_PAYMENT_MODE: 'full_payment'
+    };
+    expect(selectPaymentProvider({ ...env, N6_YOOKASSA_RECEIPT_TAX_SYSTEM_CODE: '' })?.fiscal)
+      .toEqual({ vat_code: 1, payment_subject: 'service', payment_mode: 'full_payment' });
+    for (const bad of [{ N6_YOOKASSA_RECEIPTS_MODE: 'off' }, { N6_YOOKASSA_RECEIPT_VAT_CODE: '0' },
+    { N6_YOOKASSA_RECEIPT_PAYMENT_SUBJECT: 'unknown' }, { N6_YOOKASSA_RECEIPT_PAYMENT_MODE: 'advance' }, { N6_YOOKASSA_RECEIPT_TAX_SYSTEM_CODE: '7' }])
+      expect(selectPaymentProvider({ ...env, ...bad })).toMatchObject({ name: 'yookassa', fiscal: null });
+  });
+  it('YooKassa replays the exact serialized receipt and provider key on an injected transport', async () => {
+    const id = '2dc42d05-c01f-41df-99cb-57864dff55c3', pay = '48b6831e-a90b-41e6-87af-fe6dea825720';
+    const fiscal = { payment_mode: 'full_payment' as const, vat_code: 1, payment_subject: 'service', tax_system_code: 2 };
+    const requests: { key: string | null; bytes: string }[] = [];
+    const adapter = createYooKassaProvider({
+      shopId: '123456', secretKey: 'fixture', testMode: true, fiscal,
+      fetchImpl: async (_url, init) => {
+        if (String(_url).endsWith('/me')) return Response.json({ account_id: '123456', test: true });
+        requests.push({ key: new Headers(init?.headers).get('idempotence-key'), bytes: String(init?.body) });
+        return Response.json({
+          id: pay, status: 'pending', amount: { currency: 'RUB', value: '990.00' }, recipient: { account_id: '123456' },
+          metadata: { order_id: id }, test: true, paid: false, confirmation: { confirmation_url: 'https://forms.invalid/pay' }
+        });
+      }
+    });
+    const input = { orderId: id, description: 'Без бейджа', amountMinor: 99000, returnUrl: 'https://sufler.invalid/return', receipt: { email: 'buyer@example.invalid', fiscal } };
+    const serializedBody = adapter.serializePayment!(input);
+    await adapter.createPayment({ ...input, serializedBody });
+    await adapter.createPayment({ ...input, description: 'changed', receipt: { ...input.receipt, email: 'other@example.invalid' }, serializedBody });
+    expect(requests).toEqual([{ key: id, bytes: serializedBody }, { key: id, bytes: serializedBody }]);
+    expect(JSON.parse(serializedBody).receipt).toEqual({
+      customer: { email: input.receipt.email }, tax_system_code: 2,
+      items: [{ description: input.description, quantity: '1.00', amount: { value: '990.00', currency: 'RUB' }, payment_subject: 'service', payment_mode: 'full_payment', vat_code: 1 }]
+    });
   });
   it('live без магазина, без ключа или с неявным режимом test — отказ, называющий переменную', () => {
     expect(assertPaymentsEnv(LIVE)).toBe('live');
@@ -75,7 +112,7 @@ describe('экран возврата: шесть различимых сост�
     expect(decideReturnState(null, RETURN_MAX_ATTEMPTS)).toEqual({ kind: 'unconfirmed' });
     expect(decideReturnState({ status: 'pending' }, RETURN_MAX_ATTEMPTS)).toEqual({ kind: 'unconfirmed' });
     // Неизвестный статус не превращается в успех.
-    expect(decideReturnState({ status: 'SUCCEEDED' }, 1)).toEqual({ kind: 'waiting', attempts: 1 });
+    expect(decideReturnState(JSON.parse('{"status":"SUCCEEDED"}'), 1)).toEqual({ kind: 'waiting', attempts: 1 });
   });
 });
 
@@ -103,7 +140,7 @@ describe('порядок входа маршрутов оплаты', () => {
     const touch = (name: string) => async () => { calls.push(name); throw new Error(`${name} не должен вызываться`); };
     return {
       publicOrigin: PUBLIC, authenticate: async () => { calls.push('auth'); return { account_id: '11111111-1111-4111-8111-111111111111' }; },
-      allowMutation: async () => { calls.push('limit'); return true; }, provider: null,
+      tokenHash: token => token, allowMutation: async () => { calls.push('limit'); return true; }, provider: null,
       createIntent: touch('intent'), setIntentPayment: touch('set'), readIntent: touch('read'), markCanceled: touch('cancel'),
       applyPayment: touch('apply'), recordRefund: touch('refund'), recordInterest: touch('interest'),
       isOriginScreen: (v: unknown): v is 'pricing' => v === 'pricing', log: () => {}, ...over,
@@ -170,4 +207,24 @@ describe('стражи по исходнику', () => {
     expect(code).toMatch(/if \(!response\.ok\) throw new PaymentProviderUnavailable/);
     expect(code).not.toMatch(/return\s+\{[^}]*unavailable/i);
   });
+});
+
+// Regression oracle: a test flag must not authorize POST with credentials for a live store.
+it('YooKassa attests the actual shop and mode before any payment POST', async () => {
+  const fiscal = { payment_mode: 'full_payment' as const, vat_code: 1, payment_subject: 'service' };
+  const input = { orderId: '2dc42d05-c01f-41df-99cb-57864dff55c3', description: 'Без бейджа', amountMinor: 99000,
+    returnUrl: 'https://sufler.invalid/return', receipt: { email: 'buyer@example.invalid', fiscal } };
+  for (const me of [{ account_id: '123456', test: false }, { account_id: '654321', test: true },
+    { account_id: '123456', test: 'true' }, {}, null]) {
+    const requests: string[] = [];
+    const provider = createYooKassaProvider({ shopId: '123456', secretKey: 'fixture', testMode: true, fiscal,
+      fetchImpl: async (url, init) => { requests.push(init?.method ?? 'GET'); return Response.json(me); } });
+    await expect(provider.createPayment(input)).rejects.toThrow();
+    expect(requests).toEqual(['GET']);
+  }
+  let posts = 0;
+  const unavailable = createYooKassaProvider({ shopId: '123456', secretKey: 'fixture', testMode: true, fiscal,
+    fetchImpl: async (_url, init) => { if (init?.method === 'POST') posts++; return new Response(null, { status: 503 }); } });
+  await expect(unavailable.createPayment(input)).rejects.toThrow();
+  expect(posts).toBe(0);
 });

@@ -10,6 +10,7 @@ import { createElement, Fragment, type ReactElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { chromium, webkit, type Browser, type Page } from 'playwright';
 import { domRules, axeRule, textZoomRule } from '../../scripts/responsive/rules.mjs';
+import { mountOwnerChat, selectPreviousAnswer } from '../fixtures/sufler-source-journey';
 import { preflight } from '../../scripts/responsive/input.mjs';
 import { AddSource, BotForm, BotListSection, OwnerChat, SourceList, type BotListView, type OwnerMessage, type SourceItemView } from '../../apps/web/src/app/dashboard/CabinetViews';
 import { InstallView, type InstallViewProps } from '../../apps/web/src/app/dashboard/InstallViews';
@@ -18,6 +19,7 @@ import { MonthBanner, PublishBlock, SummaryBlock, VerifyBlock } from '../../apps
 import { SiteHeader } from '../../apps/web/src/app/SiteHeader';
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: () => {}, replace: () => {}, refresh: () => {} }) }));
 
+const engines = process.env.SUFLER_UI_ENGINES === 'chromium' ? { chromium } : { chromium, webkit };
 type Theme = 'dark' | 'light';
 const CSS = readFileSync('apps/web/src/app/globals.css', 'utf8');
 const ARTIFACTS = 'tests/artifacts/bot-cabinet/browser';
@@ -116,7 +118,7 @@ const html = (name: string, theme: Theme) => `<!doctype html><html lang="ru" dat
 let server: Server;
 let base: string;
 beforeAll(async () => {
-  try { await preflight(['chromium', 'webkit']); }
+  try { await preflight(Object.keys(engines)); }
   catch (error) { throw new Error(`НЕ ВЫПОЛНЕНО: ${String(error)}`); }
   server = createServer((req, res) => {
     const match = /^\/([a-z-]+)-(dark|light)\.html$/.exec(req.url ?? '');
@@ -133,7 +135,7 @@ afterAll(async () => { if (server) await new Promise<void>((resolve, reject) => 
 const errors = (found: { severity: string; rule: string; axeRule?: string; selector: string; message: string }[]) =>
   found.filter(f => f.severity === 'error').map(f => `${f.rule}${f.axeRule ? '/' + f.axeRule : ''} ${f.selector}: ${f.message}`);
 
-for (const [engineName, engine] of Object.entries({ chromium, webkit })) describe(engineName, () => {
+for (const [engineName, engine] of Object.entries(engines)) describe(engineName, () => {
   let browser: Browser;
   beforeAll(async () => { browser = await engine.launch(); });
   afterAll(async () => { await browser?.close(); });
@@ -145,6 +147,22 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) describ
       await run(page);
     } finally { await context.close(); }
   }
+  for (const width of [390, 1440]) it(`цитата владельца видна до первого нажатия · ${width}`, () =>
+    open('empty', 'light', { width, height: 900 }, async page => {
+      await mountOwnerChat(page, 'cabinet');
+      await selectPreviousAnswer(page, '#owner-question');
+    }));
+  it('локальная проверка трёх сценариев без переключения ответов', () => open('empty', 'dark', { width: 390, height: 844 }, async page => {
+    const requests: string[] = [];
+    page.on('request', req => { if (req.method() !== 'GET') requests.push(req.method()); });
+    await mountOwnerChat(page, 'cabinet');
+    for (const name of ['Обычный вопрос','Нет сведений','Связь с компанией']) await page.getByRole('checkbox', { name }).check();
+    await page.getByRole('checkbox', { name: 'Нет сведений' }).check();
+    await page.getByText('Отмечено на этом экране: 3 из 3').waitFor();
+    await page.getByRole('button', { name: 'Другой бот' }).click();
+    await page.getByText('Отмечено на этом экране: 0 из 3').waitFor();
+    expect(requests).toEqual([]);
+  }));
   for (const theme of ['dark', 'light'] as const) for (const name of NAMES) {
     it(`${name} ${theme} 390: R1/R2/R5, axe (R4, контраст AA) и R8 без отказов`, () => open(name, theme, { width: 390, height: 844 }, async page => {
       expect(errors(await domRules(page, ['R1', 'R2', 'R5']))).toEqual([]);

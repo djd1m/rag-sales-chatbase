@@ -25,7 +25,7 @@ const CSS = readFileSync('apps/web/src/app/globals.css', 'utf8');
 const ARTIFACTS = 'tests/artifacts/tariffs-and-interest/browser';
 const INTENT = '3f2b1c7a-5c0e-4f55-9f39-1d3f6a2b8c41';
 const FREE = { plan: 'free', plan_source: 'none', plan_paid_until: null };
-const upgrade = (over: Partial<UpgradeProps>): UpgradeProps => ({ plan: 'nobadge', title: 'Без бейджа', price: '990 ₽', paymentsOn: true, current: FREE, ...over });
+const upgrade = (over: Partial<UpgradeProps>): UpgradeProps => ({ plan: 'nobadge', title: 'Без бейджа', price: '990 ₽', paymentsOn: true, verified: true, offerVersion: 'V1', current: FREE, ...over });
 const main = (child: ReactElement) => (theme: Theme) => createElement(Fragment, null, createElement(SiteHeader, { theme }),
   createElement('main', { className: 'center container' }, child));
 const ret = (state: ReturnState) => main(createElement('section', { className: 'card stack upgrade' }, createElement(ReturnView, { state })));
@@ -163,7 +163,7 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) describ
     await page.waitForURL(`${base}/yookassa-form`);
     expect(api.checkoutBodies).toHaveLength(2);
     const [first, second] = api.checkoutBodies as Array<{ plan: string; idempotency_key: string }>;
-    expect(first!.plan).toBe('nobadge');
+    expect(first).toMatchObject({ plan: 'nobadge', offer_version: 'V1' });
     expect(first!.idempotency_key).toMatch(/^[A-Za-z0-9_-]{8,128}$/);
     expect(second!.idempotency_key).toBe(first!.idempotency_key);
   }));
@@ -174,6 +174,39 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) describ
     await page.getByRole('button', { name: 'Сообщите мне' }).click();
     await expect.poll(() => page.textContent('main')).toContain('Записали');
     expect(api.interestBodies).toEqual([{ plan: 'nobadge', origin_screen: 'upgrade' }]);
+  }));
+  it('reconciliation stays distinct from an active plan and never offers duplicate checkout', () => live('return', async page => {
+    const snapshot = { status: 200, body: { data: { status: 'reconciliation_required', account_plan: 'studio', plan_paid_until: '2027-01-01T00:00:00Z' } } };
+    api.statuses.push(snapshot, snapshot, snapshot);
+    await page.getByRole('heading', { name: 'Платёж на сверке' }).waitFor();
+    expect(await page.locator('[data-state] a').count()).toBe(0);
+    const previous = api.polls;
+    await page.getByRole('button', { name: 'Проверить ещё раз' }).click();
+    await page.getByRole('heading', { name: 'Платёж на сверке' }).waitFor();
+    expect(api.polls).toBeGreaterThan(previous);
+    expect(api.checkoutBodies).toEqual([]);
+  }));
+  it('shows the original purchased plan and period alongside a later account upgrade', () => live('return', async page => {
+    api.statuses.push({
+      status: 200, body: {
+        data: {
+          status: 'succeeded', plan: 'nobadge', applied_paid_until: '2026-12-01T12:00:00Z',
+          account_plan: 'studio', plan_paid_until: '2027-01-01T12:00:00Z'
+        }
+      }
+    });
+    await page.getByRole('heading', { name: 'Покупка плана «Без бейджа» подтверждена' }).waitFor();
+    expect(await page.locator('[data-state="succeeded"]').innerText()).toContain('1 декабря 2026');
+    expect(await page.locator('[data-state="succeeded"]').innerText()).toContain('Сейчас в аккаунте действует план «Студия»');
+  }));
+  it('a changed offer needs a new explicit action', () => live('upgrade', async page => {
+    api.checkout.push({ status: 409, body: { error: { code: 'offer_version_changed', version: 'V2', message: 'Оферта обновилась' } } });
+    await page.getByRole('button', { name: /Оплатить/ }).click();
+    await page.getByRole('link', { name: /редакция V2/ }).waitFor();
+    expect(api.checkoutBodies).toHaveLength(1);
+    await page.getByRole('button', { name: /Оплатить/ }).click();
+    await expect.poll(() => api.checkoutBodies.length).toBe(2);
+    expect(api.checkoutBodies[1]).toMatchObject({ offer_version: 'V2' });
   }));
   it('AC-9 интерактив: возврат опрашивает по идентификатору; pending → succeeded показывает «включён» и срок', () => live('return', async page => {
     api.statuses.push({ status: 200, body: { data: { status: 'pending' } } });

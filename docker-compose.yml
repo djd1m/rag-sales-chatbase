@@ -24,6 +24,12 @@ x-model-env: &model-env
   N6_SPEND_LOG: /work/spend/model-spend.jsonl
   N6_UPLOAD_DIR: /work/uploads
 
+# Transactional mail is shared only by web and the existing delivery watchdog.
+x-mail-env: &mail-env
+  N6_MAIL_MODE: ${N6_MAIL_MODE-disabled}
+  N6_RESEND_API_KEY: ${N6_RESEND_API_KEY:-}
+  N6_MAIL_FROM: ${N6_MAIL_FROM:-}
+
 # 14 переменных на 10 scope (канон §7, A-N6-020): у каждого предела своя переменная.
 # Пустая переменная не означает «без ограничений» — LoadCeilings валит старт и называет её.
 x-quota-env: &quota-env
@@ -76,7 +82,7 @@ services:
       target: web
     image: n6-sufler-web:${IMAGE_TAG:-dev}
     environment:
-      <<: [*app-env, *model-env, *quota-env]
+      <<: [*app-env, *model-env, *quota-env, *mail-env]
       ANSWER_PROVIDER: ${ANSWER_PROVIDER:?провайдер ответов не задан}
       ANSWER_MODEL: ${ANSWER_MODEL:?модель ответов не задана}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
@@ -90,6 +96,17 @@ services:
       YOOKASSA_SHOP_ID: ${YOOKASSA_SHOP_ID:-}
       YOOKASSA_SECRET_KEY: ${YOOKASSA_SECRET_KEY:-}
       YOOKASSA_TEST_MODE: ${YOOKASSA_TEST_MODE:-}
+      N6_SUPPORT_MODE: ${N6_SUPPORT_MODE-disabled}
+      N6_SUPPORT_BASE_URL: ${N6_SUPPORT_BASE_URL:-}
+      N6_SUPPORT_INBOX_ID: ${N6_SUPPORT_INBOX_ID:-}
+      N6_SUPPORT_JWT_SECRET: ${N6_SUPPORT_JWT_SECRET:-}
+      N6_SUPPORT_CONTACT_EMAIL: ${N6_SUPPORT_CONTACT_EMAIL:-}
+      N6_PRIVACY_CONTACT_EMAIL: ${N6_PRIVACY_CONTACT_EMAIL:-}
+      N6_YOOKASSA_RECEIPTS_MODE: ${N6_YOOKASSA_RECEIPTS_MODE-disabled}
+      N6_YOOKASSA_RECEIPT_VAT_CODE: ${N6_YOOKASSA_RECEIPT_VAT_CODE:-}
+      N6_YOOKASSA_RECEIPT_PAYMENT_SUBJECT: ${N6_YOOKASSA_RECEIPT_PAYMENT_SUBJECT:-}
+      N6_YOOKASSA_RECEIPT_PAYMENT_MODE: ${N6_YOOKASSA_RECEIPT_PAYMENT_MODE:-}
+      N6_YOOKASSA_RECEIPT_TAX_SYSTEM_CODE: ${N6_YOOKASSA_RECEIPT_TAX_SYSTEM_CODE:-}
     # порта на хосте НЕТ: единственная дверь — proxy
     volumes:
       - uploads:/work/uploads
@@ -116,7 +133,7 @@ services:
       target: worker
     image: n6-sufler-worker:${IMAGE_TAG:-dev}
     environment:
-      <<: [*app-env, *model-env, *quota-env]
+      <<: [*app-env, *model-env, *quota-env, *mail-env]
       # параллельность задач индексации — 1, константа кода apps/worker/src/index.ts (вежливость краулера);
       # прежняя N6_INDEX_CONCURRENCY: "2" кодом не читалась (honest-configuration CFG-I5) и снята (source-lifecycle)
     volumes:

@@ -6,10 +6,11 @@ import path from 'node:path';
 // playwright — из отдельного пакета прибора scripts/responsive (ADR-007: не в корне монорепо).
 export default defineConfig({ esbuild: { jsx: 'automatic' },
   resolve: { alias: [
-    { find: /^playwright$/, replacement: path.resolve('scripts/responsive/node_modules/playwright/index.mjs') },
-    { find: /^@axe-core\/playwright$/, replacement: path.resolve('scripts/responsive/node_modules/@axe-core/playwright/dist/index.mjs') },
+    { find: /^playwright$/, replacement: path.resolve(process.env.SUFLER_BROWSER_TOOL_ROOT ?? 'scripts/responsive/node_modules', 'playwright/index.mjs') },
+    { find: /^@axe-core\/playwright$/, replacement: path.resolve(process.env.SUFLER_BROWSER_TOOL_ROOT ?? 'scripts/responsive/node_modules', '@axe-core/playwright/dist/index.mjs') },
     { find: /^@n6\/rag\/(check-address|bot-settings|commission|payout-details|constants)$/, replacement: path.resolve('packages/rag/src') + '/$1.ts' },
     { find: /^@n6\/rag$/, replacement: path.resolve('packages/rag/src/index.ts') },
+    { find: /^@n6\/notifications$/, replacement: path.resolve('packages/notifications/src/index.ts') },
     { find: /^@n6\/db$/, replacement: path.resolve('packages/db/src/index.ts') },
   ] },
   test: { include: ['tests/browser/**/*.test.ts'],

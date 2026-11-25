@@ -137,6 +137,8 @@ AM-13 (FR-4 traceability review): Login advertises password recovery only when e
 
 AM-14 (FR-4 keyboard evidence): Native password buttons keep field contents and button focus, expose their pressed state and never submit while switching with Enter or Space in either account mode. Confirmation: → test `login password visibility works with Enter and Space without losing input or submitting` in `tests/browser/customer-trust-auth.test.ts` (fails if reverted).
 
+AM-15 (FR-3 traceability evidence): The ordinary manual creation form preserves entered values when collapsed and reopened and after a real field-validation error; successful creation opens the issued bot at the source section. Confirmation: → test `ручное создание из пустого кабинета сохраняет ввод при сворачивании и ошибке поля` in `tests/browser/sufler-preview-recovery.test.ts` (fails if reverted).
+
 ## File ownership
 
 Ниже точные кодовые цели. Путь из блока не даёт право менять файл другого писателя. В [реестре](06_ownership.md) определены границы, новые имена и неизменяемые регрессионные зависимости.

@@ -31,6 +31,63 @@ beforeEach(async () => {
 afterEach(async () => { await context?.close(); });
 afterAll(async () => { await browser?.close(); await pool?.end(); });
 
+it('ручное создание из пустого кабинета сохраняет ввод при сворачивании и ошибке поля', async () => {
+  await registerOwner(context);
+  await page.goto(origin + '/dashboard');
+  await page.getByRole('heading', { name: 'Ботов пока нет' }).waitFor();
+  const steps = page.getByRole('list', { name: 'Этапы настройки' });
+  expect(await steps.getByRole('listitem').allTextContents()).toEqual(['Материалы', 'Проверка', 'Установка']);
+  expect(await steps.locator('[aria-current=step]').textContent()).toBe('Материалы');
+  const start = page.getByLabel('Адрес вашего сайта');
+  expect(await start.isVisible()).toBe(true);
+
+  const summary = page.getByText('Создать бота вручную', { exact: true });
+  await summary.click();
+  const company = page.getByLabel('Название компании', { exact: true });
+  const contact = page.getByLabel('Контакт для «не знаю»', { exact: true });
+  const greeting = page.getByLabel('Приветствие', { exact: true });
+  const companyName = 'Учебная мастерская';
+  const invalidContact = 'неверный контакт';
+  const welcome = 'Здравствуйте! Чем помочь?';
+  await company.fill(companyName);
+  await contact.fill(invalidContact);
+  await greeting.fill(welcome);
+  await summary.click();
+  expect(await company.isVisible()).toBe(false);
+  await summary.click();
+  const fields = [company, contact, greeting];
+  const values = [companyName, invalidContact, welcome];
+  expect(await Promise.all(fields.map(field => field.inputValue()))).toEqual(values);
+  expect(posts).toEqual([]);
+
+  const submit = page.locator('form').filter({ has: company }).getByRole('button', { name: 'Создать бота', exact: true });
+  const createResponse = () => page.waitForResponse(response =>
+    new URL(response.url()).pathname === '/api/bots' && response.request().method() === 'POST');
+  const refusal = createResponse();
+  await submit.click();
+  const rejected = await refusal;
+  expect(rejected.status()).toBe(422);
+  const { error } = await rejected.json();
+  expect(error.field).toBe('contact');
+  const alert = page.getByRole('alert').filter({ hasText: error.message });
+  await alert.waitFor();
+  expect(await contact.getAttribute('aria-invalid')).toBe('true');
+  expect((await contact.getAttribute('aria-describedby'))?.split(' ')).toContain(await alert.getAttribute('id'));
+  expect(await Promise.all(fields.map(field => field.inputValue()))).toEqual(values);
+  expect(page.url()).toBe(origin + '/dashboard');
+
+  await contact.fill('help@example.test');
+  const success = createResponse();
+  await submit.click();
+  const created = await success;
+  expect(created.status()).toBe(201);
+  const { data } = await created.json();
+  await page.waitForURL(origin + '/dashboard/bots/' + data.bot_id + '#sources-title');
+  await page.locator('#sources-title').waitFor();
+  await page.getByRole('heading', { name: companyName, exact: true }).waitFor();
+  expect(posts).toEqual(['/api/bots', '/api/bots']);
+});
+
 it('terminal failure begins a new attempt while an unknown POST retains its key', async () => {
   // The database contains a previously accepted launch and its real quota charge.
   // A public numeric address lets CheckAddress run on the isolated stand without DNS.

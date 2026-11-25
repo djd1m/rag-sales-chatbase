@@ -35,7 +35,7 @@ it('login password visibility works with Enter and Space without losing input or
       expect(await show.getAttribute('aria-pressed')).toBe('false');
       expect(await show.evaluate(element => element === document.activeElement)).toBe(true);
       expect(posts).toBe(0);
-      expect(await page.getByRole('link', { name: 'Забыли пароль?' }).count()).toBe(mode === 'login' ? 1 : 0);
+      expect(await page.getByRole('link', { name: 'Забыли пароль?' }).count()).toBe(mode === 'login' && process.env.N6_MAIL_MODE === 'resend' ? 1 : 0);
     } finally { await page.close(); }
   }
 });

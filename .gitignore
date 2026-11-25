@@ -57,3 +57,10 @@ id_ed25519
 # Кэш вспомогательных Python-скриптов.
 __pycache__/
 *.py[cod]
+
+# Feature-ADR / AQE runtime: local memory, witnessed receipts and generated hooks.
+.dz/
+.agentic-qe/
+**/.fa-state/
+.codex/hooks.json
+.codex/dz-hooks/

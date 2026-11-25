@@ -1,0 +1,4 @@
+
+# Preserve byte-identical upstream QE protocols and their recorded hashes.
+# Native whitespace is kept only in vendored reference material.
+.claude/skills/feature-adr/references/agentic-qe/** -text -whitespace

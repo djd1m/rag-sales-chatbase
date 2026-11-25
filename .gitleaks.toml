@@ -1,4 +1,4 @@
-# Gitleaks: стандартные правила и узкое исключение для четырёх mock-значений.
+# Gitleaks: стандартные правила и точечные rule/path/value исключения для проверенных mock-значений.
 # Обоснование: tests/browser/widget-harness.ts использует loopback HTTP, BOTS в памяти
 # и fakeAnswerGateway; эти строки не открывают доступ к реальным сервисам.
 [extend]
@@ -18,3 +18,10 @@ regexes = [
   '''^PubBotKey0123456789abc$''',
   '''^harness\-secret\-0123456789abcdef0123456789abcdef$''',
 ]
+
+[[rules.allowlists]]
+description = "Pinned upstream tc005_hardcoded_credentials: deliberately synthetic sequential API key, never runtime"
+condition = "AND"
+paths = ['''^\.claude/skills/feature-adr/references/agentic-qe/qe-ref-security-testing/evals/security-testing\.yaml$''']
+regexTarget = "secret"
+regexes = ['''^sk\-1234567890abcdef$''']

@@ -1,0 +1,17 @@
+{
+  "$doc": "The guard checks tracked and non-ignored publishable files. Required configuration must exist in the public inventory. Every waiver needs a reason.",
+  "secretScan": {
+    "required": [
+      ".codex/config.toml",
+      ".env.example",
+      ".env.vps.example",
+      "architecture/project-skills.json",
+      "architecture/subsystems.manifest.json",
+      "openspec/config.yaml",
+      "tools/feature-process/package.json",
+      "tools/feature-process/package-lock.json"
+    ],
+    "waivers": []
+  },
+  "frozenFiles": []
+}

@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+process_dir=$(cd -- "$(dirname -- "$0")" && pwd)
+bin_dir="$process_dir/node_modules/.bin"
+if [[ ! -x "$bin_dir/node" ]]; then
+  echo 'Install the pinned toolchain with Node >=22.20: npm ci --prefix tools/feature-process' >&2
+  exit 2
+fi
+
+export PATH="$bin_dir:$PATH"
+cd -- "$process_dir/../.."
+# Match Git's checkout-local variables so a calling hook cannot select another checkout.
+unset GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR GIT_INDEX_FILE GIT_PREFIX GIT_IMPLICIT_WORK_TREE \
+  GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_GRAFT_FILE GIT_SHALLOW_FILE \
+  GIT_NO_REPLACE_OBJECTS GIT_REPLACE_REF_BASE GIT_CONFIG GIT_CONFIG_PARAMETERS GIT_CONFIG_COUNT
+tool=${1:-}
+if [[ -n "$tool" ]]; then shift; fi
+
+case "$tool" in
+  dz|openspec|aqe|skills-feature-adr)
+    exec "$bin_dir/$tool" "$@"
+    ;;
+  aqe-mcp)
+    exec "$bin_dir/aqe" mcp "$@"
+    ;;
+  aqe-recall)
+    exec node "$process_dir/aqe-recall.mjs" "$@"
+    ;;
+  k1)
+    exec node "$process_dir/check-names.mjs" "$@"
+    ;;
+  k2)
+    exec node .claude/skills/feature-adr/scripts/check-plan-completeness.mjs --require-requirements "$@"
+    ;;
+  convergence)
+    exec node .claude/skills/feature-adr/scripts/check-review-convergence.mjs "$@"
+    ;;
+  stage)
+    exec node "$process_dir/check-stage.mjs" "$@"
+    ;;
+  *)
+    echo 'Usage: tools/feature-process/run {dz|openspec|aqe|aqe-mcp|aqe-recall|skills-feature-adr|k1|k2|convergence|stage} [arguments]' >&2
+    exit 2
+    ;;
+esac

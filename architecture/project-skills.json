@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "roles": {
+    "product-vision": "architecture/vision.md",
+    "testing": "architecture/testing.md",
+    "impl-bar": ".claude/rules/coding-style.md"
+  }
+}

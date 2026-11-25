@@ -1,0 +1,7 @@
+[mcp_servers.agentic-qe]
+command = "bash"
+args = ["tools/feature-process/run", "aqe-mcp"]
+
+[mcp_servers.agentic-qe.env]
+AQE_MEMORY_BACKEND = "memory"
+AQE_V3_MODE = "true"

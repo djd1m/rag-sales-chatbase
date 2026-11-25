@@ -63,4 +63,14 @@ docs/telemetry
 **/*.bak
 # UI/UX-аудит использует отдельный образ; артефакты и cookie не входят в product build.
 tools/ui-ux-audit
+# Process tooling and local hook/memory state are not app runtime.
+tools/feature-process
+.agents
+.codex
+.agentic-qe
+.dz
+features
+architecture
+openspec
+**/.fa-state
 !docs/canon.md

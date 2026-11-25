@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "subsystems": [
+    {
+      "id": "application",
+      "label": "Веб-приложение",
+      "job": null,
+      "desc": "Next.js: предпросмотр, управление ботами, публичная страница, авторизация и API. Код в apps/web/src.",
+      "packages": [
+        "web"
+      ],
+      "packagePatterns": [],
+      "commands": []
+    },
+    {
+      "id": "jobs",
+      "label": "Фоновые задачи",
+      "job": null,
+      "desc": "BullMQ и воркер индексации, повторов и удаления. Код в apps/worker/src и packages/queue/src.",
+      "packages": [
+        "worker",
+        "queue"
+      ],
+      "packagePatterns": [],
+      "commands": []
+    },
+    {
+      "id": "retrieval",
+      "label": "Извлечение знаний",
+      "job": null,
+      "desc": "Чанкинг, поиск, формирование и проверка ответа, провайдеры и учёт стоимости. Код в packages/rag/src.",
+      "packages": [
+        "rag"
+      ],
+      "packagePatterns": [],
+      "commands": []
+    },
+    {
+      "id": "storage",
+      "label": "Хранение и учёт",
+      "job": null,
+      "desc": "Postgres, pgvector, миграции, состояние ботов, квоты, оплата и партнёрский учёт. Код в packages/db.",
+      "packages": [
+        "db"
+      ],
+      "packagePatterns": [],
+      "commands": []
+    },
+    {
+      "id": "widget",
+      "label": "Встраиваемый виджет",
+      "job": null,
+      "desc": "Отдельный TypeScript-бандл для внешних сайтов с Shadow DOM. Код в apps/widget/src.",
+      "packages": [
+        "widget"
+      ],
+      "packagePatterns": [],
+      "commands": []
+    }
+  ]
+}

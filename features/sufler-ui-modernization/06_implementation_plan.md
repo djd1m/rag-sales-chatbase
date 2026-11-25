@@ -129,11 +129,18 @@ AM-9 (UI review terminal retry): A known terminal failed result starts a fresh e
 
 AM-10 (UI review claim feedback): Ask and claim errors have separate state. A failed save is announced and visible beside its CTA with continuation, preserving the chat draft. Confirmation: → test `claim failure is announced next to the save action` in `tests/browser/sufler-preview-recovery.test.ts` (fails if reverted).
 
+AM-11 (observed U09 clipboard denial): Keep the installation workflow. A denied or missing clipboard API reports the failure and reveals a labelled readonly field; Tab selects exactly the server-issued tag for manual copying. A later denial must clear earlier success. Confirmation: → test `заполненная установка и отдельный внешний origin дают наблюдаемую квитанцию` in `tests/browser/sufler-source-journey.test.ts` (fails if reverted).
+
+AM-12 (observed footer and pricing scope): Align legal navigation with the page content. Describe pages per site reading and answer periods per Moscow calendar day/month separately from the paid 30 days; prices and enforced limits stay unchanged. Confirmation: → test `тарифы соответствуют переданным лимитам и работающим CTA` in `tests/browser/design-shell.test.ts` (fails if reverted).
+
 ## File ownership
 
 Ниже точные кодовые цели. Путь из блока не даёт право менять файл другого писателя. В [реестре](06_ownership.md) определены границы, новые имена и неизменяемые регрессионные зависимости.
 
 EXPECTED_CODE_TARGETS:
+- apps/web/src/app/TrustSiteFooter.tsx
+- apps/web/src/app/dashboard/InstallViews.tsx
+- apps/web/src/app/dashboard/bots/[botId]/install/InstallScreen.tsx
 - apps/web/src/app/Landing.tsx
 - apps/web/src/app/OwnerAnswerSource.tsx
 - apps/web/src/app/SiteHeader.tsx
@@ -167,6 +174,7 @@ EXPECTED_CODE_TARGETS:
 - tests/browser/design-shell.test.ts
 - tests/browser/preview-flow.test.ts
 - tests/browser/bot-cabinet.test.ts
+- tests/browser/gate-onboarding.test.ts
 - tests/browser/sufler-source-journey.test.ts
 - tests/browser/sufler-preview-recovery.test.ts
 - tests/fixtures/sufler-source-journey.ts

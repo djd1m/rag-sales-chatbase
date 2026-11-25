@@ -13,6 +13,7 @@ export interface InstallViewProps {
   gate?: GateBannerView;
   botId: string; companyName: string; snippet: InstallSnippet; origins: string[];
   contact: string; domain: string; errors: FieldErrors; busy: boolean; copied: boolean;
+  copyError?: string;
   onContact: (value: string) => void; onSaveContact: () => void; onDomain: (value: string) => void; onAddDomain: () => void; onCopy: () => void;
 }
 
@@ -77,7 +78,11 @@ export function InstallView(p: InstallViewProps) {
       <p>Вставьте эту строку перед закрывающим тегом <code>&lt;/body&gt;</code> на каждой странице сайта:</p>
       <pre className="snippet" tabIndex={0} aria-label="Код установки"><code>{p.snippet.tag}</code></pre>
       <p className="cluster"><button type="button" onClick={p.onCopy}>Скопировать код</button>
-        <span role="status" className="muted">{p.copied ? 'Скопировано' : ''}</span></p>
+        <span role="status" className="muted">{p.copyError || (p.copied ? 'Скопировано' : '')}</span></p>
+      {p.copyError && <label className="stack">Код для ручного копирования
+        <span className="muted">Перейдите в поле клавишей Tab — код выделится. Нажмите Ctrl+C или ⌘C.</span>
+        <textarea className="snippet" readOnly value={p.snippet.tag} rows={4} onFocus={event => event.currentTarget.select()} />
+      </label>}
       <details className="howto"><summary>Tilda</summary><p>Настройки сайта → Ещё → «HTML-код для вставки внутрь body» → вставьте строку и опубликуйте все страницы.</p></details>
       <details className="howto"><summary>WordPress</summary><p>Внешний вид → Редактор тем → footer.php, перед <code>&lt;/body&gt;</code>; или плагин вставки кода в подвал.</p></details>
       <details className="howto"><summary>Обычный HTML</summary><p>Добавьте строку в шаблон перед <code>&lt;/body&gt;</code>. Атрибут <code>async</code> не задерживает загрузку страницы.</p></details>

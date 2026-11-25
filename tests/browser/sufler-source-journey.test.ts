@@ -358,11 +358,23 @@ it('заполненная установка и отдельный внешни
   const instructions = page.locator('details.howto');
   expect(await instructions.locator('summary').allTextContents()).toEqual(['Tilda','WordPress','Обычный HTML']);
   await instructions.last().locator('summary').click();
-  await context.grantPermissions(['clipboard-read','clipboard-write'], { origin });
-  await page.getByRole('button', { name: 'Скопировать код' }).click();
-  await page.getByText('Скопировано', { exact: true }).waitFor();
+  const copy = page.getByRole('button', { name: 'Скопировать код' });
+  const checkDenied = async () => {
+    await context.clearPermissions(); await context.grantPermissions([], { origin });
+    expect(await page.evaluate(async () => (await navigator.permissions.query({ name: 'clipboard-write' as PermissionName })).state)).toBe('denied');
+    await copy.focus(); await copy.press('Enter');
+    await page.getByRole('status').filter({ hasText: 'Браузер не разрешил копирование' }).waitFor();
+    expect(await page.getByText('Скопировано', { exact: true }).count()).toBe(0);
+    const manual = page.getByRole('textbox', { name: /Код для ручного копирования/ });
+    await page.keyboard.press('Tab'); expect(await manual.evaluate(el => document.activeElement === el)).toBe(true);
+    expect(await manual.evaluate((el: HTMLTextAreaElement) => el.value.slice(el.selectionStart, el.selectionEnd))).toBe(await page.locator('.snippet code').textContent());
+  };
+  await checkDenied();
+  await context.clearPermissions(); await context.grantPermissions(['clipboard-read','clipboard-write'], { origin });
+  await copy.focus(); await copy.press('Enter'); await page.getByText('Скопировано', { exact: true }).waitFor();
   const tag = await page.evaluate(() => navigator.clipboard.readText());
   expect(tag).toBe(await page.locator('.snippet code').textContent());
+  await checkDenied();
   expect(await events()).toEqual([]);
   const filename = `sufler-u09-${randomUUID()}.html`;
   const target = path.join(publicDir, filename);

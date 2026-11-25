@@ -37,7 +37,7 @@ export function Pricing({ theme, answers }: { theme: Theme; answers: PlanAnswers
           {plan.id === 'nobadge' && <p className="badge-row"><span>«Работает на Суфлёре»</span><strong className="accent-text">— убрать</strong></p>}
           <ul>
             <li>Ботов: {count(plan.bots)}</li>
-            <li>Страниц на бота: {count(plan.pages)}</li>
+            <li>Страниц за чтение сайта: {count(plan.pages)}</li>
             <li>PDF на бота: {count(plan.pdf)}</li>
             <li>Ответов в сутки на бота: {count(plan.day)}</li>
             <li>Ответов в месяц на бота: {count(plan.month)}</li>
@@ -52,7 +52,7 @@ export function Pricing({ theme, answers }: { theme: Theme; answers: PlanAnswers
             <tbody>
               <tr><th scope="row">Цена за 30 дней</th>{plans.map(p => <td key={p.id}>{p.price}{p.id !== 'free' && ' (предварительно)'}</td>)}</tr>
               <tr><th scope="row">Ботов</th>{plans.map(p => <td key={p.id}>{count(p.bots)}</td>)}</tr>
-              <tr><th scope="row">Страниц на бота</th>{plans.map(p => <td key={p.id}>{count(p.pages)}</td>)}</tr>
+              <tr><th scope="row">Страниц за чтение сайта</th>{plans.map(p => <td key={p.id}>{count(p.pages)}</td>)}</tr>
               <tr><th scope="row">PDF на бота</th>{plans.map(p => <td key={p.id}>{count(p.pdf)}</td>)}</tr>
               <tr><th scope="row">Ответов в сутки на бота</th>{plans.map(p => <td key={p.id}>{count(p.day)}</td>)}</tr>
               <tr><th scope="row">Ответов в месяц на бота</th>{plans.map(p => <td key={p.id}>{count(p.month)}</td>)}</tr>
@@ -61,6 +61,7 @@ export function Pricing({ theme, answers }: { theme: Theme; answers: PlanAnswers
         </div>
       </section>
       <section className="faq" aria-labelledby="faq-title"><h2 id="faq-title">Вопросы</h2>
+        <details><summary>Как считаются периоды и страницы?</summary><p>Предел ответов действует отдельно на каждого бота и обновляется по календарным суткам и месяцам Москвы. Страницы ограничены за одно чтение источника сайта. Эти периоды отличаются от оплаченных 30 дней.</p></details>
         <details open><summary>Что считается ответом?</summary><p>Каждый вопрос посетителя, на который бот ответил, — по вашим материалам или честным «не знаю» с вашим контактом. Вопросы, отклонённые из-за исчерпанного предела или с чужого сайта, не считаются. Вопросы в предпросмотре считаются отдельно и в предел плана не входят.</p></details>
         <details><summary>Что будет, когда ответы закончатся?</summary><p>Посетитель увидит ваш контакт вместо ответа, а вы — предупреждение в кабинете. Бот не отвечает «поменьше» молча.</p></details>
         <details><summary>Можно убрать подпись без оплаты?</summary><p>Нет: подпись на бесплатном плане — условие использования. Её показ решает сервер, а не настройка на сайте.</p></details>

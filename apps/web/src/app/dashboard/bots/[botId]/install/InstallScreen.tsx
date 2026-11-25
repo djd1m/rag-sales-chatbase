@@ -19,6 +19,7 @@ export function InstallScreen({ gate, ...p }: { botId: string; companyName: stri
   const [errors, setErrors] = useState<FieldErrors>({});
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState('');
   // Отметка «Я проверил ответы бота» прямо из баннера (gate-onboarding): тот же POST /verify, что на экране бота;
   // после успеха страница перечитывается сервером — баннер исчезает по данным БД, а не по состоянию браузера.
   const [verifying, setVerifying] = useState(false);
@@ -49,12 +50,15 @@ export function InstallScreen({ gate, ...p }: { botId: string; companyName: stri
     } catch { setErrors({ [fieldName]: 'Нет связи с сервером. Повторите' }); } finally { setBusy(false); }
   };
   return <InstallView {...p} gate={{ ...gate, verified: shownVerified, justVerified, chatHref: `/dashboard/bots/${p.botId}#chat-title`, busy: verifying, error: verifyError, onVerify: () => { void verify(); } }}
-    contact={contact} domain={domain} errors={errors} busy={busy} copied={copied}
+    contact={contact} domain={domain} errors={errors} busy={busy} copied={copied} copyError={copyError}
     onContact={setContact} onDomain={setDomain}
     onSaveContact={() => { void call(`/api/bots/${p.botId}`, 'PATCH', { contact }, 'contact', () => setContact('')); }}
     onAddDomain={() => { void call(`/api/bots/${p.botId}/origins`, 'POST', { domain }, 'domain', () => setDomain('')); }}
     onCopy={() => {
       if (p.snippet.kind !== 'ready') return;
-      void navigator.clipboard?.writeText(p.snippet.tag).then(() => setCopied(true), () => setCopied(false));
+      setCopied(false); setCopyError('');
+      const failed = () => { setCopied(false); setCopyError('Браузер не разрешил копирование. Скопируйте код из поля ниже.'); };
+      if (!navigator.clipboard) { failed(); return; }
+      void navigator.clipboard.writeText(p.snippet.tag).then(() => setCopied(true), failed);
     }} />;
 }

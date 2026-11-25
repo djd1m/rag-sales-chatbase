@@ -97,6 +97,8 @@ TASK-1 → скелет TASK-9 → автор 1 (TASK-2/3/4) и автор 2 (TA
 
 - AM-21 (real compiled Next timeout failure): Payment-provider unavailable and verification errors retain their typed identity across independently compiled instrumentation and route modules. Use distinct immutable, own Symbol.for brands on actual Error instances; matching names, reason fields and JSON do not establish identity. Preserve dispatch cutoff and provider-timeout response contracts. Confirmation: → test `payment errors retain identity across independently evaluated modules` in `tests/billing.unit.test.ts` (fails if reverted); independently exercise the compiled Next checkout timeout and cutoff before release.
 
+- AM-22 (failed six-side v2 measurement): Keep the failed raw run and verdict. A fresh symmetric readiness POST with an empty login body must return exactly 422 invalid before the workload clock; never drop tick zero or retry a failed probe. In a new v3 run, only the frozen baseline may retain its observed generic checkout 503 at the exact injected abort; after drain independently read and require its sole original unbound intent. Current checkout timeouts must report the same held intent using the typed code. Confirmation: → test `workload v3 requires readiness and preserves only the frozen baseline timeout contract` in `tests/customer-trust-runtime.integration.test.ts` (fails if reverted).
+
 EXPECTED_CODE_TARGETS:
 - .env.example
 - .env.vps.example

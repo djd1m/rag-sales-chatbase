@@ -20,15 +20,25 @@ function specimenSide(side: Side, pair: number) {
   const customer = sequences.customer!.map(sample => {
     const kind = customerSchedule(side, sample.i) as keyof typeof healthy;
     let error = null;
-    for (const [step, endpoint] of providerSteps(side, kind, attested).entries()) {
+    let checkoutEvidence;
+    for (const endpoint of providerSteps(side, kind, attested)) {
       const timeout = pair === 3 && (external.length + 1) % 5 === 0;
       external.push({ kind: endpoint, timeout, clientAborted: timeout, ms: timeout ? 5000 : 50 });
       if (!timeout) { if (endpoint === 'checkout_attest') attested = true; continue; }
       if (kind === 'verify') error = 'delivery_unknown';
-      if (kind === 'checkout') error = endpoint === 'checkout_attest' ? 'unavailable' : 'payment_provider_unavailable';
+      if (kind === 'checkout') {
+        const beforeIntent = endpoint === 'checkout_attest';
+        const responseIntentMatches = !beforeIntent && side === 'current';
+        checkoutEvidence = {
+          noIntent: beforeIntent, heldIntent: !beforeIntent,
+          responseIntentMatches, responseIntentAbsent: !responseIntentMatches,
+        };
+        error = responseIntentMatches ? 'payment_provider_unavailable' : 'unavailable';
+      }
       break;
     }
-    return { ...sample, kind, status: error ? 503 : healthy[kind], valid: !error, code: error || null, ms: error ? 5100 : 100 };
+    return { ...sample, kind, status: error ? 503 : healthy[kind], valid: !error, code: error || null, ms: error ? 5100 : 100,
+      checkoutEvidence };
   });
   const limits = {
     db: [0.5, 384], redis: [0.05, 64], web: [0.85, 640], worker: [0.4, 384], proxy: [0.075, 64], fake: [0.075, 128],
@@ -43,6 +53,7 @@ function specimenSide(side: Side, pair: number) {
   const auditBefore = { delayMs: 50, timeoutEvery: pair === 3 ? 5 : 0, blocked: 0, invalid: 0, egress: 0, paid: 0, answer: 0, embed: 1, external: [] };
   return {
     side, network: { internal: true, onlyIsolated: true, blocked: true, defaultRoute: false },
+    readiness: { status: 422, code: 'invalid', ms: 25 },
     resources: { before: resource(), after: resource(), sampleErrors: 0,
       stats: Array.from({ length: 48 }, (_, i) => ({ elapsedMs: i * 15000, containers })) },
     auditBefore, audit: { ...auditBefore, answer: 720, embed: 733, external },
@@ -146,6 +157,48 @@ test('signed timer jitter permits only two early milliseconds and retains the la
       const report = specimen(); report.pairs[0]!.current.workload[name][0]!.lagMs = lagMs;
       expect(gradeReport(report).failures, name + ':' + String(lagMs)).toContain('pair 1 current ' + name + ' cadence or timings');
     }
+  }
+});
+
+test('workload v3 requires readiness and preserves only the frozen baseline timeout contract', () => {
+  const timeout = (r: ReturnType<typeof specimen>, side: Side) =>
+    r.pairs[2]![side].workload.customer.find(row => row.kind === 'checkout' && row.status === 503)!;
+  const healthy = specimen();
+  expect(gradeReport(healthy)).toMatchObject({ analysisVersion: 3, ok: true, failures: [] });
+  expect(timeout(healthy, 'baseline').code).toBe('unavailable');
+  expect(timeout(healthy, 'current').code).toBe('payment_provider_unavailable');
+
+  const controls: { label: string; mutate: (r: ReturnType<typeof specimen>) => void }[] = [
+    { label: 'pair 1 baseline mutation readiness probe', mutate: r => { r.pairs[0]!.baseline.readiness.status = 503; } },
+    { label: 'pair 1 current mutation readiness probe', mutate: r => { r.pairs[0]!.current.readiness.code = 'unavailable'; } },
+    { label: 'pair 1 current mutation readiness probe', mutate: r => { r.pairs[0]!.current.readiness.ms = NaN; } },
+    { label: 'pair 3 current customer response status or payload for checkout', mutate: r => {
+      timeout(r, 'current').code = 'unavailable';
+    } },
+    { label: 'pair 3 baseline customer response status or payload for checkout', mutate: r => {
+      const healthyCheckout = r.pairs[2]!.baseline.workload.customer.find(row => row.kind === 'checkout' && row.status === 201)!;
+      Object.assign(healthyCheckout, { status: 503, code: 'unavailable', checkoutEvidence: timeout(r, 'baseline').checkoutEvidence });
+    } },
+    { label: 'pair 3 baseline external HTTP scenario or timeout deadline', mutate: r => {
+      r.pairs[2]!.baseline.audit.external.find(row => row.kind === 'checkout' && row.timeout)!.clientAborted = false;
+    } },
+    { label: 'pair 3 baseline checkout timeout durable intent evidence', mutate: r => {
+      timeout(r, 'baseline').checkoutEvidence!.heldIntent = false;
+    } },
+    { label: 'pair 3 baseline checkout timeout durable intent evidence', mutate: r => {
+      timeout(r, 'baseline').checkoutEvidence!.responseIntentAbsent = false;
+    } },
+    { label: 'pair 3 current checkout timeout durable intent evidence', mutate: r => {
+      timeout(r, 'current').checkoutEvidence!.responseIntentMatches = false;
+    } },
+    { label: 'pair 3 current checkout timeout durable intent evidence', mutate: r => {
+      timeout(r, 'current').checkoutEvidence = undefined;
+    } },
+  ];
+  for (const { label, mutate } of controls) {
+    const report = structuredClone(healthy);
+    mutate(report);
+    expect(gradeReport(report), label).toMatchObject({ ok: false, failures: expect.arrayContaining([label]) });
   }
 });
 

@@ -71,7 +71,9 @@ function gradeTelemetry(run, fail) {
 }
 
 function gradeSide(run, side, pair, fail) {
-  const { workload, auditBefore, audit } = run ?? {};
+  const { workload, auditBefore, audit, readiness } = run ?? {};
+  if (readiness?.status !== 422 || readiness.code !== 'invalid' || !finite(readiness.ms))
+    fail('mutation readiness probe');
   if (!run || run.failure || run.side !== side || !workload) {
     fail('run incomplete');
     return {};
@@ -108,22 +110,35 @@ function gradeSide(run, side, pair, fail) {
 
   let externalIndex = 0, attested = false;
   for (const sample of workload.customer ?? []) {
-    let expectedError;
+    let expectedError, checkoutTimeout;
     for (const [step, kind] of providerSteps(side, sample.kind, attested).entries()) {
       const fake = audit?.external?.[externalIndex++];
       const timeout = pair === 3 && externalIndex % 5 === 0;
       if (fake?.kind !== kind || fake.timeout !== timeout || !finite(fake.ms)
-        || (timeout ? (!fake.clientAborted || fake.ms < 4500 || fake.ms > 5250)
+        || (timeout ? (fake.clientAborted !== true || fake.ms < 4500 || fake.ms > 5250)
           : (fake.clientAborted !== false || fake.ms < 45))) fail('external HTTP scenario or timeout deadline');
       if (!timeout) { if (kind === 'checkout_attest') attested = true; continue; }
       if (sample.kind === 'verify') expectedError = 'delivery_unknown';
-      if (sample.kind === 'checkout') expectedError = kind === 'checkout_attest' && step === 0
-        ? 'unavailable' : 'payment_provider_unavailable';
+      if (sample.kind === 'checkout') {
+        checkoutTimeout = kind === 'checkout_attest' && step === 0 ? 'before-intent' : 'after-intent';
+        // The frozen baseline loses the typed exception across Next bundles.
+        // Its exact historical 503 is allowed only for this observed fake abort.
+        expectedError = side === 'baseline' || checkoutTimeout === 'before-intent'
+          ? 'unavailable' : 'payment_provider_unavailable';
+      }
       break;
     }
     if (expectedError ? (sample.status !== 503 || sample.code !== expectedError)
       : (sample.status !== expectedStatus[sample.kind] || sample.code !== null || sample.valid !== true)) {
       fail('customer response status or payload for ' + sample.kind);
+    }
+    if (checkoutTimeout) {
+      const evidence = sample.checkoutEvidence;
+      const errorMustNameIntent = side === 'current' && checkoutTimeout === 'after-intent';
+      if (evidence?.noIntent !== (checkoutTimeout === 'before-intent') ||
+        evidence.heldIntent !== (checkoutTimeout === 'after-intent') ||
+        evidence.responseIntentMatches !== errorMustNameIntent ||
+        evidence.responseIntentAbsent !== !errorMustNameIntent) fail('checkout timeout durable intent evidence');
     }
     if (sample.kind === 'authority' && sample.ms > 2000) fail('support authority deadline');
     if (sample.kind === 'verify' && sample.ms > 8000) fail('verify send deadline');
@@ -173,7 +188,7 @@ export function gradeReport(report) {
     comparisons[kind] = { baseline: medians.baseline, current: medians.current, limit };
     if (limit === null || medians.current === null || medians.current > limit) failures.add(kind + ' comparative p95');
   }
-  return { analysisVersion: 2, ok: failures.size === 0, failures: [...failures], comparisons, results };
+  return { analysisVersion: 3, ok: failures.size === 0, failures: [...failures], comparisons, results };
 }
 
 function command(program, args, { timeout = 45_000, cwd = root } = {}) {

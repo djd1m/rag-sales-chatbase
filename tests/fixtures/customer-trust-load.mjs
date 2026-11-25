@@ -63,7 +63,7 @@ async function seed(pool, side, secret, passwordHash) {
         }
         const ip = prefix(lane, index);
         const token = randomBytes(32).toString('base64url');
-        const row = { email, ip, cookie: '__Host-n6_session=' + token };
+        const row = { accountId: account, email, ip, cookie: '__Host-n6_session=' + token };
         rows[name].push(row);
         if (name !== 'rag') {
           await client.query(`INSERT INTO session(account_id,token_hash,ip_prefix,expires_at)
@@ -110,7 +110,8 @@ async function http(path, actor, { payload, timeout = 8000, headers, raw } = {})
     const result = await response.json().catch(() => null);
     const error = result?.error?.code;
     return { ms: performance.now() - started, status: response.status, code: typeof error === 'string'
-      ? (knownCodes.has(error) ? error : 'other') : null, data: result?.data };
+      ? (knownCodes.has(error) ? error : 'other') : null, data: result?.data,
+      errorIntent: result?.error?.intent_id, errorHasIntent: Object.hasOwn(result?.error ?? {}, 'intent_id') };
   } catch {
     return { ms: performance.now() - started, status: 0, code: 'request_failed' };
   }
@@ -120,7 +121,7 @@ export function record(result) {
   return { ms: result.ms, status: result.status, code: result.code };
 }
 
-async function customer(side, index, actor, password, offerVersion) {
+async function customer(side, index, actor, password, offerVersion, checkoutFailures) {
   const kind = customerSchedule(side, index);
   const requests = {
     login: ['/api/auth/login', { payload: { email: actor.email, password } }],
@@ -132,6 +133,10 @@ async function customer(side, index, actor, password, offerVersion) {
   };
   const [path, opts] = requests[kind];
   const result = await http(path, actor, opts);
+  if (kind === 'checkout' && result.status === 503) checkoutFailures.set(index, {
+    accountId: actor.accountId, key: opts.payload.idempotency_key,
+    errorIntent: result.errorIntent, errorHasIntent: result.errorHasIntent,
+  });
   const verified = {
     login: result.data?.ok === true,
     checkout: result.data?.status === 'created' && result.data?.redirect_url === 'https://merchant.test/payment',
@@ -192,6 +197,26 @@ async function readQuota(pool) {
   };
 }
 
+async function addCheckoutEvidence(pool, samples, failures) {
+  if (failures.size === 0) return;
+  const ids = Array.from(failures.values(), failure => failure.accountId);
+  const { rows } = await pool.query(`SELECT id,account_id,idempotency_key,status,provider_payment_id
+    FROM payment_intent WHERE account_id=ANY($1::uuid[])`, [ids]);
+  for (const sample of samples) {
+    const failure = failures.get(sample.i);
+    if (!failure) continue;
+    const orders = rows.filter(row => row.account_id === failure.accountId);
+    const original = orders[0];
+    sample.checkoutEvidence = {
+      noIntent: orders.length === 0,
+      heldIntent: orders.length === 1 && original.idempotency_key === failure.key
+        && original.status === 'created' && original.provider_payment_id === null,
+      responseIntentMatches: original !== undefined && failure.errorIntent === original.id,
+      responseIntentAbsent: failure.errorHasIntent === false,
+    };
+  }
+}
+
 async function drive(pool, side, rows, password, offerVersion) {
   for (const actor of rows.rag) {
     const result = await http('/w/v1/config?bot=' + actor.botKey, actor);
@@ -205,6 +230,7 @@ async function drive(pool, side, rows, password, offerVersion) {
   const until = warmupMs + measuredMs;
   const pending = [];
   const output = { rag: [], job: [], customer: [] };
+  const checkoutFailures = new Map();
   const lanes = {
     rag: async index => {
       const actor = rows.rag[index % rows.rag.length];
@@ -214,7 +240,7 @@ async function drive(pool, side, rows, password, offerVersion) {
       return { ...record(result), answered: result.data?.status === 'answered' && Boolean(result.data.source) };
     },
     job: i => index(rows.job[i]),
-    customer: i => customer(side, i, rows.customer[i], password, offerVersion),
+    customer: i => customer(side, i, rows.customer[i], password, offerVersion, checkoutFailures),
   };
   for (let tick = 0; tick < until; tick += cadence.rag) {
     await sleep(Math.max(0, start + tick - performance.now()));
@@ -239,7 +265,9 @@ async function drive(pool, side, rows, password, offerVersion) {
     }
     await sleep(1000);
   } while (true);
-  return { ...output, durationMs: performance.now() - start, quota: await readQuota(pool) };
+  const durationMs = performance.now() - start;
+  await addCheckoutEvidence(pool, output.customer, checkoutFailures);
+  return { ...output, durationMs, quota: await readQuota(pool) };
 }
 
 async function main() {
@@ -257,10 +285,15 @@ async function main() {
     const password = randomBytes(24).toString('base64url');
     const hash = await loadRequire('bcrypt').hash(password, 10);
     const data = await seed(pool, side, env.SESSION_SECRET, hash);
+    // Health checks PostgreSQL. An empty login crosses the web Redis limiter
+    // before validation and cannot create an auth session or call a provider.
+    const readiness = record(await http('/api/auth/login', { ip: '198.19.254.10' }, { payload: {} }));
+    if (readiness.status !== 422 || readiness.code !== 'invalid')
+      return { side, network, readiness, failure: 'mutation_readiness' };
     const auditBefore = await (await fetch(fakeAudit, { signal: AbortSignal.timeout(2000) })).json();
     const workload = await drive(pool, side, data, password, env.SUFLER_LOAD_OFFER_VERSION);
     const audit = await (await fetch(fakeAudit, { signal: AbortSignal.timeout(2000) })).json();
-    return { side, network, workload: workload, auditBefore, audit };
+    return { side, network, readiness, workload, auditBefore, audit };
   } finally {
     await pool.end();
   }

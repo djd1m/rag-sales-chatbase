@@ -4,10 +4,15 @@ import { loadWebConfig } from '@n6/rag';
 import { environment } from './fixtures/environment';
 import * as runtime from '../apps/web/src/server/runtime';
 import { authRoute } from '../apps/web/src/server/route';
-import { createHmac, randomBytes } from 'node:crypto';
+import { createHmac, randomBytes, randomUUID } from 'node:crypto';
+import { copyFile, mkdtemp, readdir, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createPool, type Pool } from '../packages/db/src/index';
 import { migrate } from '../packages/db/src/migrate';
 import { CustomerEmailProofStore } from '../packages/db/src/customer-email-proof';
+import { applyVerifiedPayment, openVerifiedPaymentIntent, readPaymentIntent } from '../packages/db/src/payments';
 import { ensureTestDatabase } from '../scripts/test-db.mjs';
 import { AuthService } from '../apps/web/src/server/auth';
 import { PgAuthStore } from '../apps/web/src/server/auth-store';
@@ -19,6 +24,93 @@ import type { CustomerMailTransport } from '../packages/notifications/src/index'
 const origin = 'https://sufler.test';
 const secret = randomBytes(32).toString('hex');
 const url = process.env.DATABASE_URL;
+
+it.skipIf(!url)('upgrading populated 015 to 017 preserves sessions and billing history', async () => {
+  if (!url) throw new Error('Требуется отдельная тестовая БД');
+  await ensureTestDatabase(url);
+  const schema = 'trust_upgrade_' + randomBytes(8).toString('hex');
+  const migrations = fileURLToPath(new URL('../packages/db/migrations/', import.meta.url));
+  const staged = await mkdtemp(join(tmpdir(), 'trust-upgrade-'));
+  const pool = createPool(url, schema);
+  try {
+    await pool.query('CREATE SCHEMA ' + schema);
+    const files = (await readdir(migrations)).filter(name => /^\d{3}_[a-z0-9_]+\.sql$/.test(name)).sort();
+    const legacy = files.filter(name => name.slice(0, 3) <= '015');
+    const upgrade = files.filter(name => ['016', '017'].includes(name.slice(0, 3)));
+    expect(legacy.map(name => Number(name.slice(0, 3)))).toEqual(Array.from({ length: 15 }, (_, i) => i + 1));
+    expect(upgrade.map(name => name.slice(0, 3))).toEqual(['016', '017']);
+    const stage = (names: string[]) => Promise.all(names.map(name => copyFile(join(migrations, name), join(staged, name))));
+    const ledger = async () => (await pool.query('SELECT * FROM _schema_migration ORDER BY name')).rows;
+    await stage(legacy);
+    await migrate(pool, staged);
+    const oldLedger = await ledger();
+    expect(oldLedger.map(row => row.name)).toEqual(legacy);
+
+    const auth = new AuthService(new PgAuthStore(pool), secret);
+    const session = randomBytes(32).toString('base64url'), sessionHash = auth.tokenHash(session);
+    const email = 'historical-owner@example.test', accountId = randomUUID(), intentId = randomUUID(), providerId = randomUUID();
+    await pool.query(`INSERT INTO account(id,email,password_hash,plan,plan_source,plan_paid_until)
+      VALUES($1,$2,'fixture-hash','nobadge','payment',now()+interval '25 days')`, [accountId, email]);
+    await pool.query(`INSERT INTO session(account_id,token_hash,ip_prefix,expires_at)
+      VALUES($1,$2,'192.0.2.0/24',now()+interval '3 days')`, [accountId, sessionHash]);
+    await pool.query(`INSERT INTO payment_intent(id,account_id,plan,price_minor,idempotency_key,provider_payment_id,status)
+      VALUES($1,$2,'nobadge',99000,'historical-checkout',$3,'succeeded')`, [intentId, accountId, providerId]);
+    await pool.query(`INSERT INTO payment(intent_id,account_id,provider,provider_payment_id,plan,amount_minor,fee_minor,status,needs_review,review_reason,paid_at)
+      VALUES($1,$2,'yookassa',$3,'nobadge',99000,750,'refunded',true,'refund',now()-interval '5 days')`, [intentId, accountId, providerId]);
+    const history = async () => (await pool.query(`SELECT to_jsonb(a) AS account, to_jsonb(s) AS session,
+        to_jsonb(i) AS intent, to_jsonb(p) AS payment
+      FROM account a JOIN session s ON s.account_id=a.id JOIN payment_intent i ON i.account_id=a.id
+      JOIN payment p ON p.intent_id=i.id WHERE s.token_hash=$1 AND i.id=$2`, [sessionHash, intentId])).rows;
+    const [before] = await history();
+    expect(before).toBeDefined();
+    expect(await auth.authenticate(session)).toEqual({ account_id: accountId });
+
+    await stage(upgrade);
+    await migrate(pool, staged);
+    const newLedger = await ledger();
+    expect(newLedger.slice(0, 15)).toEqual(oldLedger);
+    expect(newLedger.slice(15).map(row => row.name)).toEqual(upgrade);
+    expect(await history()).toEqual([{
+      ...before,
+      account: { ...before.account, email_verified_at: null },
+      intent: { ...before.intent, offer_version: null, offer_digest: null, offer_accepted_at: null,
+        checkout_snapshot: null, first_post_at: null, applied_paid_until: null },
+    }]);
+    expect(await auth.authenticate(session)).toEqual({ account_id: accountId });
+    const proofs = new CustomerEmailProofStore(pool);
+    expect(await proofs.viewer(sessionHash)).toEqual({ account_id: accountId, email, verified: false });
+    expect(await readPaymentIntent(pool, intentId, accountId)).toMatchObject({
+      id: intentId, plan: 'nobadge', price_minor: 99000, status: 'succeeded', provider_payment_id: providerId,
+      account_plan: 'nobadge', shop: null,
+    });
+
+    const offer = readTrustDocument('offer'), shop = 'test:123';
+    const input = {
+      accountId, sessionHash, plan: 'nobadge' as const, idempotencyKey: randomUUID(), offerVersion: offer.version, offer, shop,
+      fiscal: { vat_code: 1, payment_subject: 'service', payment_mode: 'full_payment' as const },
+      publicOrigin: origin, description: 'Суфлёр, Без бейджа',
+    };
+    expect(await openVerifiedPaymentIntent(pool, input)).toEqual({ kind: 'email_verification_required' });
+    const digest = randomBytes(32).toString('hex');
+    expect(await proofs.prepare('verify', email, digest, sessionHash)).toBe(true);
+    expect(await proofs.activate('verify', digest)).toBe(true);
+    expect(await proofs.confirm(digest, sessionHash)).toBe(true);
+    const opened = await openVerifiedPaymentIntent(pool, input);
+    if (opened.kind !== 'created') throw new Error('Checkout after migration: ' + opened.kind);
+    expect(opened.intent.checkout_snapshot).toMatchObject({ email, shop, fiscal: input.fiscal });
+    const paymentId = randomUUID();
+    expect(await applyVerifiedPayment(pool, {
+      provider: 'yookassa', eventKey: 'payment_succeeded:' + paymentId, payloadSha256: 'e'.repeat(64),
+      payment: { id: paymentId, orderId: opened.intent.id, shop, amountMinor: opened.intent.price_minor, feeMinor: 750, paidAt: new Date().toISOString() },
+    })).toMatchObject({ applied: true, plan: 'nobadge' });
+    expect((await pool.query('SELECT intent_id,recipient FROM purchase_mail_delivery')).rows)
+      .toEqual([{ intent_id: opened.intent.id, recipient: email }]);
+  } finally {
+    try { await pool.query('DROP SCHEMA IF EXISTS ' + schema + ' CASCADE'); }
+    finally { await pool.end(); await rm(staged, { recursive: true, force: true }); }
+  }
+}, 30_000);
+
 describe.skipIf(!url)('customer trust • identity', () => {
   const schema = 'customer_proof_' + randomBytes(8).toString('hex');
   let pool: Pool, auth: AuthService, proofs: CustomerEmailProofStore;

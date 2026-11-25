@@ -2,7 +2,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { once } from 'node:events';
 import { expect, test } from 'vitest';
 import { baselineCommit, gradeReport, percentiles } from '../scripts/check-customer-trust-load.mjs';
-import { answerScopes, cadence, customerSchedule, providerSteps, measuredMs, warmupMs } from './fixtures/customer-trust-load.mjs';
+import { answerScopes, cadence, customerSchedule, providerSteps, measuredMs, warmupMs, waitForLoadDeadline } from './fixtures/customer-trust-load.mjs';
 import { createLoadFake, installLoadTransport } from './fixtures/customer-trust-load-transport.mjs';
 
 type Side = 'baseline' | 'current';
@@ -143,6 +143,32 @@ test('isolated workload rejects p95 and memory regression against baseline', () 
     expect(result.ok, label).toBe(false);
     expect(result.failures, label).toContain(label);
   }
+});
+
+test('absolute load deadlines recheck early timer wakeups without shifting or dropping ticks', async () => {
+  let clock = 97.7;
+  const wakes = [98.4, 99.2, 100.1];
+  const sleeps: number[] = [];
+  await waitForLoadDeadline(100, () => clock, async (ms: number) => {
+    sleeps.push(ms); clock = wakes.shift()!;
+  });
+  expect(sleeps).toEqual([3, 2, 1]);
+  expect(clock).toBeGreaterThanOrEqual(100);
+  expect(wakes).toEqual([]);
+
+  // An already due tick needs no delay; an oversleep keeps all absolute ticks,
+  // rather than changing the start or dropping a scheduled request.
+  clock = 105;
+  const dispatched: number[] = [];
+  const requested: number[] = [];
+  for (const due of [100, 101, 110]) {
+    await waitForLoadDeadline(due, () => clock, async (ms: number) => { requested.push(ms); clock += ms; });
+    dispatched.push(due);
+    expect(clock - due).toBeGreaterThanOrEqual(0);
+  }
+  expect(dispatched).toEqual([100, 101, 110]);
+  expect(requested).toEqual([5]);
+  expect(clock).toBe(110);
 });
 
 test('signed timer jitter permits only two early milliseconds and retains the late deadline', () => {

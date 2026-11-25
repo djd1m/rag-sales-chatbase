@@ -217,6 +217,17 @@ async function addCheckoutEvidence(pool, samples, failures) {
   }
 }
 
+// Promise timers may wake before the high-resolution due time. Never infer that
+// a completed sleep means the absolute deadline has actually been reached.
+/** @param {number} deadline @param {() => number} [now] @param {(ms: number) => Promise<void>} [pause] */
+export async function waitForLoadDeadline(deadline, now = () => performance.now(), pause = ms => sleep(ms)) {
+  for (;;) {
+    const remaining = deadline - now();
+    if (remaining <= 0) return;
+    await pause(Math.ceil(remaining));
+  }
+}
+
 async function drive(pool, side, rows, password, offerVersion) {
   for (const actor of rows.rag) {
     const result = await http('/w/v1/config?bot=' + actor.botKey, actor);
@@ -243,17 +254,18 @@ async function drive(pool, side, rows, password, offerVersion) {
     customer: i => customer(side, i, rows.customer[i], password, offerVersion, checkoutFailures),
   };
   for (let tick = 0; tick < until; tick += cadence.rag) {
-    await sleep(Math.max(0, start + tick - performance.now()));
+    const due = start + tick;
+    await waitForLoadDeadline(due);
     for (const [lane, every] of Object.entries(cadence)) {
       if (tick % every !== 0) continue;
       const i = tick / every;
       const phase = tick < warmupMs ? 'warmup' : 'measured';
-      const lagMs = performance.now() - start - tick;
+      const lagMs = performance.now() - due;
       const kind = lane === 'customer' ? customerSchedule(side, i) : lane;
       pending.push(lanes[lane](i).then(sample => output[lane].push({ i, phase, kind, lagMs, ...sample })));
     }
   }
-  await sleep(Math.max(0, start + until - performance.now()));
+  await waitForLoadDeadline(start + until);
   await Promise.all(pending);
   for (const lane of Object.values(output)) lane.sort((a, b) => a.i - b.i);
   do {

@@ -101,6 +101,8 @@ TASK-1 → скелет TASK-9 → автор 1 (TASK-2/3/4) и автор 2 (TA
 
 - AM-23 (coverage measurement validity): An unimported-file V8 all:true fallback assigns counters to comments, blanks and erased TypeScript. Preserve those invalid projection attempts; obtain actual transformed counters using meaningful default HTTP boundary and server-rendered UI contracts plus focused browser recovery transitions. Never count fallback physical lines as established executable-line percentages. Confirmation: → test `anonymous customer routes reject foreign origins before account or provider access` in `tests/customer-trust-boundaries.unit.test.ts` and test `server-rendered preview and recovery surfaces do not disclose private state` in `tests/customer-trust-ssr.unit.test.ts` (fails if reverted).
 
+AM-24 (measured deadline repair): Preserve the failed six-side report with its one −2.0878 ms early baseline tick. The workload producer exports waitForLoadDeadline, waits by ceil of the remaining absolute monotonic deadline, then rechecks that same clock before dispatch and at the measurement end. Keep the fixed start + tick schedule, every actor/tick, raw unmodified signed lag, existing −2 ms / 1000 ms bounds and all HTTP/resource/quota oracles. Do not regrade the failed report as passed. Confirmation: → test `absolute load deadlines recheck early timer wakeups without shifting or dropping ticks` in `tests/customer-trust-runtime.integration.test.ts` (fails if reverted).
+
 EXPECTED_CODE_TARGETS:
 - .env.example
 - .env.vps.example

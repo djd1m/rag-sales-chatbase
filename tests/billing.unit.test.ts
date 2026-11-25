@@ -4,6 +4,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { runInThisContext } from 'node:vm';
+import { transformSync } from 'esbuild';
 import { PLAN_PRICE_MINOR, formatRubles } from '../packages/rag/src/constants';
 import { parseSetPlanArgs } from '../packages/db/src/ops-set-plan';
 import { createYooKassaProvider } from '../apps/web/src/server/payments/yookassa';
@@ -250,4 +252,34 @@ it('YooKassa refuses physical POST when cold attestation crosses the original re
     await reached; now += 1000; release(); await rejected;
     expect(posts).toBe(0);
   } finally { release(); clock.mockRestore(); }
+});
+
+
+it('payment errors retain identity across independently evaluated modules', () => {
+  const { code } = transformSync(readFileSync('apps/web/src/server/payments/provider.ts', 'utf8'), { loader: 'ts', format: 'cjs', target: 'es2022' });
+  const load = () => {
+    const module = { exports: {} };
+    runInThisContext('(function(module,exports){' + code + '\n})')(module, module.exports);
+    return module.exports as typeof import('../apps/web/src/server/payments/provider');
+  };
+  const left = load(), right = load();
+  expect(left.PaymentProviderUnavailable).not.toBe(right.PaymentProviderUnavailable);
+  for (const [producer, consumer] of [[left, right], [right, left]]) {
+    const unavailable = new producer!.PaymentProviderUnavailable('idempotency_window_elapsed');
+    const verification = new producer!.PaymentVerificationError('invalid payment');
+    expect(unavailable).toBeInstanceOf(consumer!.PaymentProviderUnavailable);
+    expect(verification).toBeInstanceOf(consumer!.PaymentVerificationError);
+    expect(verification).not.toBeInstanceOf(consumer!.PaymentProviderUnavailable);
+    expect(unavailable).not.toBeInstanceOf(consumer!.PaymentVerificationError);
+    const spoof = Object.assign(new Error('unknown'), { name: 'PaymentProviderUnavailable', reason: 'idempotency_window_elapsed' });
+    expect(spoof).not.toBeInstanceOf(consumer!.PaymentProviderUnavailable);
+    expect(JSON.parse(JSON.stringify(unavailable))).not.toBeInstanceOf(consumer!.PaymentProviderUnavailable);
+    expect({ name: 'PaymentVerificationError' }).not.toBeInstanceOf(consumer!.PaymentVerificationError);
+    class Derived extends consumer!.PaymentProviderUnavailable {}
+    expect(unavailable).not.toBeInstanceOf(Derived);
+    expect(new Derived('timeout')).toBeInstanceOf(consumer!.PaymentProviderUnavailable);
+    const symbols = Object.getOwnPropertySymbols(unavailable);
+    expect(symbols).toHaveLength(1);
+    expect(Object.getOwnPropertyDescriptor(unavailable, symbols[0]!)).toMatchObject({ enumerable: false, writable: false, configurable: false, value: true });
+  }
 });

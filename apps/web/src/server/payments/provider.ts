@@ -16,6 +16,14 @@ export class PaymentProviderUnavailable extends Error {
   constructor(readonly reason: string) {
     super(`платёжный провайдер недоступен: ${reason}`);
     this.name = 'PaymentProviderUnavailable';
+    Object.defineProperty(this, Symbol.for('sufler.payment-provider.unavailable/v1'), { value: true });
+  }
+  // Instrumentation and route bundles evaluate independent constructors in one Node realm.
+  static [Symbol.hasInstance](value: unknown): boolean {
+    if (this !== PaymentProviderUnavailable) return Function.prototype[Symbol.hasInstance].call(this, value);
+    return value instanceof Error
+      && Object.getOwnPropertyDescriptor(value, Symbol.for('sufler.payment-provider.unavailable/v1'))?.value === true
+      && typeof Object.getOwnPropertyDescriptor(value, 'reason')?.value === 'string';
   }
 }
 
@@ -24,6 +32,12 @@ export class PaymentVerificationError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'PaymentVerificationError';
+    Object.defineProperty(this, Symbol.for('sufler.payment-provider.verification/v1'), { value: true });
+  }
+  static [Symbol.hasInstance](value: unknown): boolean {
+    if (this !== PaymentVerificationError) return Function.prototype[Symbol.hasInstance].call(this, value);
+    return value instanceof Error
+      && Object.getOwnPropertyDescriptor(value, Symbol.for('sufler.payment-provider.verification/v1'))?.value === true;
   }
 }
 

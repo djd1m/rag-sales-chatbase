@@ -11,6 +11,9 @@ const fakeSdk = `
           for(const url of ['${desk}/decoy','${wrong}/frame']) {
             const other=document.createElement('iframe');other.src=url;document.body.append(other);
           }
+          window.addEventListener('message',event=>{
+            if(['VUE_APP_READY','REQUEST_PAGE_INFO','SHOW_CAMPAIGN'].includes(event.data?.type)) fetch('${desk}/history?user=unexpected-page-context');
+          });
           window.Libredesk={setUser:jwt=>frame.contentWindow.postMessage({jwt},'${desk}'),
             show(){},hide(){},logout(){},destroy(){frame.remove()}};
 `;
@@ -40,7 +43,7 @@ it('Libredesk readiness and identity transitions never reveal the previous conve
       if (u.origin === app && u.pathname === '/api/support/sdk') {
         scripts++;
         return route.fulfill({
-          contentType: 'application/javascript', body: rejectSdk ? fakeSdk + ';window.mutated=true' : fakeSdk});
+          contentType: 'application/javascript', body: rejectSdk ? fakeSdk + ';window.parent.document.documentElement.dataset.mutatedSdk="yes"' : fakeSdk});
       }
       if (u.origin === app) {
         if (u.pathname === '/support' && !u.search) return route.fulfill({ contentType: 'text/html', body: '<html lang="ru"><main></main><script src="/app.js"></script></html>' });
@@ -99,6 +102,7 @@ it('Libredesk readiness and identity transitions never reveal the previous conve
     await expect.poll(() => page.getByRole('button', { name: 'Открыть чат' }).evaluate(b => b === document.activeElement)).toBe(true);
     await page.getByRole('button', { name: 'Открыть чат' }).click();
     await expect.poll(() => outer.isVisible()).toBe(true);
+    await tell(frame, 'REQUEST_PAGE_INFO'); await tell(frame, 'SHOW_CAMPAIGN');
     expect([signed, scripts, history.length]).toEqual([1, 1, 1]);
     viewer = 'second-account';
     await other.evaluate(() => { const c = new BroadcastChannel('n6-auth'); c.postMessage('changed'); c.close(); });
@@ -135,5 +139,6 @@ it('Libredesk readiness and identity transitions never reveal the previous conve
     await page.getByRole('button', { name: 'Открыть чат' }).click();
     await page.getByRole('alert').waitFor();
     expect(await outer.count()).toBe(0);
+    expect(await page.locator('html').getAttribute('data-mutated-sdk')).toBeNull();
   } finally { await context.close(); await browser.close(); }
 }, 45000);

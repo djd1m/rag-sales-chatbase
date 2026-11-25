@@ -112,6 +112,6 @@ export function CustomerRecoveryForm({ mode, authenticated = false, verified = f
     {error && <p role="alert">{error}</p>}
     {verify && authenticated && phase !== 'done' && <p><a href="/dashboard">В кабинет</a></p>}
     {mode === 'forgot' && <p><a href="/login">Вернуться ко входу</a></p>}
-    <p><a href="/support">Помощь с доступом</a></p>
+    <p><a className="button secondary" href="/support">Помощь с доступом</a></p>
   </section>;
 }

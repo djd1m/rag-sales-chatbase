@@ -14,7 +14,7 @@ export function TrustLegalDocument({ kind }: { kind: TrustDocumentKind }) {
       </section>)}
     </article>
     <nav aria-label="Документы и обращения">
-      <a href="/support">Поддержка</a>
+      <a className="button secondary" href="/support">Поддержка</a>
       {listTrustDocumentLinks().filter(d => d.kind !== kind).map(d => <a key={d.kind} href={d.path}>{d.title}</a>)}
     </nav>
   </main>;

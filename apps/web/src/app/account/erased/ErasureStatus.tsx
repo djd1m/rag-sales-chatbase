@@ -17,7 +17,7 @@ export function ErasureStatus({ state }: { state: ErasureState }) {
     <p role="status" className="notice">Данные аккаунта, боты, источники и журналы вопросов стёрты.</p>
     <p className="muted">Записи об оплатах и выплатах хранятся 5 лет без вашей почты — этого требует закон о бухгалтерском учёте.</p>
     <p>Завершено локальное стирание в Суфлёре. У почтового сервиса, ЮKassa и службы поддержки могут сохраниться письма, сведения о платежах и переписка. Начатая до удаления отправка могла завершиться.</p>
-    <p><a href="/support">Поддержка и контакты по вопросам данных</a></p>
+    <p><a className="button secondary" href="/support">Поддержка и контакты по вопросам данных</a></p>
     <p><a className="button secondary" href="/">На главную</a></p>
   </section>;
   return <section className="card stack" aria-labelledby="erased-title">

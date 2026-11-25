@@ -111,7 +111,7 @@ export function UpgradeScreen(p: UpgradeProps) {
             <button type="button" className="button" disabled={busy} onClick={() => { void ask(); }}>{busy ? 'Записываем…' : 'Сообщите мне'}</button></>
           : <p role="status" className="notice">{interest === 'recorded' ? 'Записали. Напишем на почту аккаунта, когда оплата откроется.' : 'Заявка уже есть — сообщим, как только оплата откроется.'}</p>}
       </div>}
-    <p><a href="/support">Поддержка и помощь с оплатой</a></p>
+    <p><a className="button secondary" href="/support">Поддержка и помощь с оплатой</a></p>
     <p><a className="button secondary" href="/pricing">Все тарифы</a></p>
   </section>;
 }

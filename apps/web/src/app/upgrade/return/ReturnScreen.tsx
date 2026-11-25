@@ -41,7 +41,7 @@ export function ReturnView({ state, supportAvailable = false, purchase }: { stat
     case 'reconciliation_required': return <div className="stack" data-state="reconciliation_required">
       <h1>Платёж на сверке</h1><p role="status">Результат этой покупки ещё уточняется. Повторно оплачивать её не нужно.</p>
       <button type="button" className="button secondary" onClick={() => window.location.reload()}>Проверить ещё раз</button>
-      {supportAvailable && <a href="/support">Обратиться в поддержку</a>}
+      {supportAvailable && <a className="button secondary" href="/support">Обратиться в поддержку</a>}
     </div>;
     case 'unconfirmed': return <div className="stack" data-state="unconfirmed">
       <h1>Подтверждение ещё не пришло</h1>

@@ -58,7 +58,7 @@ export function AccountScreen({ preview }: { preview: ErasurePreview }) {
     <p className="notice danger-notice">Отменить удаление нельзя. Вход закроется сразу, данные сотрём не позже чем через 72 часа.</p>
     <Consequences preview={preview} />
     <p>Удаление охватывает данные в Суфлёре. Начатая отправка письма может завершиться. У почтового сервиса, ЮKassa и службы поддержки могут остаться ранее переданные сведения и переписка.</p>
-    <p><a href="/support">Поддержка и контакты по вопросам данных</a></p>
+    <p><a className="button secondary" href="/support">Поддержка и контакты по вопросам данных</a></p>
     <AccountDeletionForm />
     <p><a className="button secondary" href="/dashboard">К ботам</a></p>
   </section>;

@@ -1,0 +1,59 @@
+{
+  "status": "research_complete_not_implemented",
+  "checked_at_utc": "2026-11-25T15:33:33.507601+00:00",
+  "baseline_revision": "32b23aa5cc019e2cf2406db3590e23091632503a",
+  "methodology_reference": {
+    "repository": "https://github.com/djd1m/clipmkr",
+    "revision": "d35c15bdbf3f01e4188d4a7494f06bc021b38906",
+    "path": "docs/research/economics-improvements-20261026",
+    "adapted": "workload units, cohort sensitivity, source timestamps, split billing vs estimates, independent review; not old prices"
+  },
+  "team": [
+    {
+      "role": "code_runtime_costs_and_synthesis",
+      "agent": "sufler_pricing_code_cost",
+      "requested_model": "gpt-6.2-sol",
+      "reasoning": "high"
+    },
+    {
+      "role": "russian_market",
+      "agent": "sufler_pricing_ru_market",
+      "requested_model": "gpt-6.2-sol",
+      "reasoning": "high"
+    },
+    {
+      "role": "chatbase_market",
+      "agent": "sufler_pricing_chatbase",
+      "requested_model": "gpt-6.1-terra",
+      "reasoning": "high"
+    },
+    {
+      "role": "independent_arithmetic_and_primary_source_review",
+      "agent": "sufler_pricing_cross_review",
+      "requested_model": "gpt-6.2-astra",
+      "reasoning": "high"
+    }
+  ],
+  "actual_runtime_model_metadata": null,
+  "research_tokens": null,
+  "research_billed_cost": null,
+  "metadata_limitation": "Task overrides are observable; independent server routing metadata, usage and research billing are not exposed.",
+  "checks": {
+    "decimal_plan_rows": 84,
+    "cohort_rows": 144,
+    "calendar_rows": 4,
+    "independent_fraction_recalculation": "passed",
+    "application_tests": "not_applicable_no_product_change",
+    "paid_model_calls": "none_for_this_research"
+  },
+  "production_changes": "none",
+  "prices_quotas_and_models_changed": false,
+  "known_limitations": [
+    "No ordinary generation usage in current available spend ledger; no supplier invoice reconciliation",
+    "No paid checkout validation of competitors",
+    "Different units/functions and some public-page discrepancies",
+    "Acquiring/support/infrastructure/tax parameters are explicit scenarios, not actual bills",
+    "Current VPS throughput and quota growth not load-tested",
+    "Current tariff calendar and entitlement issues need separately scoped implementation"
+  ]
+}

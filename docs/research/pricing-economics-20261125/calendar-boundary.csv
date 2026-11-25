@@ -1,0 +1,5 @@
+id,price,workload,nominal_questions_per_payment,cost_rub,contribution_partner_before_fixed_tax_cac_rub
+current_solo,990,base,6000,992.61475,-234.433150
+current_solo,990,stress,6000,2072.61475,-1314.433150
+current_studio,4900,base,60000,8835.68850,-5083.072500
+current_studio,4900,stress,60000,19635.68850,-15883.072500

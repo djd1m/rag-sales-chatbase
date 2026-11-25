@@ -100,21 +100,27 @@ export function createYooKassaProvider(options: YooKassaOptions): PaymentProvide
   if (secretKey.length === 0 || secretKey.length > 512) throw new Error('YOOKASSA_SECRET_KEY не задан или неправдоподобно длинный');
   const authorization = `Basic ${Buffer.from(`${shopId}:${secretKey}`, 'utf8').toString('base64')}`;
 
-  async function request(path: string, init: { method?: string; body?: unknown; idempotenceKey?: string } = {}): Promise<Record<string, unknown>> {
+  async function request(path: string, init: { method?: string; body?: unknown; idempotenceKey?: string; dispatchBeforeMs?: number } = {}): Promise<Record<string, unknown>> {
     const headers: Record<string, string> = { accept: 'application/json', authorization };
     if (init.body !== undefined) headers['content-type'] = 'application/json';
     if (init.idempotenceKey !== undefined) headers['idempotence-key'] = init.idempotenceKey;
     let response: Response;
+    const requestBody = init.body === undefined ? undefined : typeof init.body === 'string' ? init.body : JSON.stringify(init.body);
     try {
+      // A cold /me probe or paused process must not extend an existing order's
+      // retry window. No awaited work belongs between this check and dispatch.
+      if (init.dispatchBeforeMs !== undefined && (!Number.isFinite(init.dispatchBeforeMs) || Date.now() >= init.dispatchBeforeMs))
+        throw new PaymentProviderUnavailable('idempotency_window_elapsed');
       response = await fetchImpl(`${apiBase}${path}`, {
         method: init.method ?? 'GET',
         headers,
-        ...(init.body === undefined ? {} : { body: typeof init.body === 'string' ? init.body : JSON.stringify(init.body) }),
+        ...(requestBody === undefined ? {} : { body: requestBody }),
         // Редирект от платёжного API — либо подмена, либо сбой; следовать ему нельзя.
         redirect: 'error',
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
     } catch (error) {
+      if (error instanceof PaymentProviderUnavailable) throw error;
       const name = (error as Error).name;
       // Таймаут и сетевой сбой — НЕДОСТУПНОСТЬ, то есть исключение, откатывающее транзакцию.
       throw new PaymentProviderUnavailable(name === 'TimeoutError' || name === 'AbortError' ? 'таймаут' : 'сетевой сбой');
@@ -254,7 +260,7 @@ export function createYooKassaProvider(options: YooKassaOptions): PaymentProvide
       // Credentials choose the actual store; the local test flag alone cannot
       // prevent a live checkout. Attest the same credentials before any POST.
       await attestEnvironment();
-      const raw = await request('/payments', { method: 'POST', idempotenceKey: input.orderId, body: input.serializedBody ?? serializePayment(input) });
+      const raw = await request('/payments', { method: 'POST', idempotenceKey: input.orderId, body: input.serializedBody ?? serializePayment(input), dispatchBeforeMs: input.dispatchBeforeMs });
       const payment = normalizePayment(raw, null);
       verify(payment.orderId === input.orderId, 'созданный платёж не привязан к нашему заказу');
       verify(payment.amountMinor === input.amountMinor, 'сумма созданного платежа не совпадает');

@@ -1,7 +1,7 @@
 // tariffs-and-interest без БД: честность режима оплаты (AC-12), цены (AC-13), состояния экрана возврата (AC-9), адрес после
 // входа (AC-14), аргументы команды оператора, адрес источника ЮKassa, порядок входа маршрутов оплаты и стражи по исходнику
 // (AC-15: план меняют ровно три места; вебхук в дереве маршрутов ровно один).
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { PLAN_PRICE_MINOR, formatRubles } from '../packages/rag/src/constants';
@@ -227,4 +227,27 @@ it('YooKassa attests the actual shop and mode before any payment POST', async ()
     fetchImpl: async (_url, init) => { if (init?.method === 'POST') posts++; return new Response(null, { status: 503 }); } });
   await expect(unavailable.createPayment(input)).rejects.toThrow();
   expect(posts).toBe(0);
+});
+
+it('YooKassa refuses physical POST when cold attestation crosses the original retry deadline', async () => {
+  const fiscal = { payment_mode: 'full_payment' as const, vat_code: 1, payment_subject: 'service' };
+  let now = Date.now(), posts = 0;
+  let release!: () => void, entered!: () => void;
+  const barrier = new Promise<void>(resolve => { release = resolve; });
+  const reached = new Promise<void>(resolve => { entered = resolve; });
+  const clock = vi.spyOn(Date, 'now').mockImplementation(() => now);
+  try {
+    const provider = createYooKassaProvider({ shopId: '123456', secretKey: 'fixture', testMode: true, fiscal,
+      fetchImpl: async (url, init) => {
+        if (String(url).endsWith('/me')) { entered(); await barrier; return Response.json({ account_id: '123456', test: true }); }
+        if (init?.method === 'POST') posts++;
+        throw new Error('expired order must never reach payment dispatch');
+      } });
+    const attempt = provider.createPayment({ orderId: '2dc42d05-c01f-41df-99cb-57864dff55c3', amountMinor: 99000,
+      returnUrl: 'https://sufler.invalid/return', description: 'Без бейджа', receipt: { email: 'buyer@example.invalid', fiscal },
+      dispatchBeforeMs: now + 1000 });
+    const rejected = expect(attempt).rejects.toMatchObject({ name: 'PaymentProviderUnavailable', reason: 'idempotency_window_elapsed' });
+    await reached; now += 1000; release(); await rejected;
+    expect(posts).toBe(0);
+  } finally { release(); clock.mockRestore(); }
 });

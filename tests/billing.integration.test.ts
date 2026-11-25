@@ -3,7 +3,7 @@
 // AC-1…AC-11 плана (docs/features/tariffs-and-interest/01_plan.md); incoming-webhooks: подделка, повтор (одно событие дважды
 // и 20 одновременных доставок), перестановка; security-operation-order: недоступность ЮKassa → 503 без записи → повтор
 // проходит полным путём; SC-US-011-1/2.
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { readTrustDocument } from '../apps/web/src/lib/trust-legal-catalog';
 import { createHash, randomBytes } from 'node:crypto';
 import { createPool, expirePaidPlans, setPlanByOperator, type Pool } from '../packages/db/src/index';
@@ -22,7 +22,7 @@ const databaseUrl = process.env.DATABASE_URL;
 const PUBLIC = 'https://sufler.test.invalid';
 const YOOKASSA_IP = '185.71.76.10';
 const DAY = 86_400_000;
-type Json = { data?: Record<string, unknown>; error?: { code: string; message: string } };
+type Json = { data?: Record<string, unknown>; error?: { code: string; message: string; intent_id?: string } };
 
 describe.skipIf(!databaseUrl)('оплата ЮKassa и интерес на настоящем Postgres', () => {
   let pool: Pool;
@@ -431,6 +431,33 @@ describe.skipIf(!databaseUrl)('оплата ЮKassa и интерес на на�
     expect((await w.checkout(a.token,{plan:'nobadge',idempotency_key:key()})).status).toBe(201);
     expect(probes).toBe(1); expect(posts).toBe(1);
     expect(await count("SELECT count(*) AS n FROM payment_intent WHERE account_id=$1 AND provider_payment_id IS NOT NULL",[a.id])).toBe(1);
+  });
+
+  it('a cold retry crossing its dispatch deadline preserves the old intent without POST', async () => {
+    const a = await account(), request = { plan: 'nobadge', idempotency_key: key() };
+    const first = await wire().checkout(a.token, request);
+    const intent = first.body.data!.intent_id;
+    await pool.query("UPDATE payment_intent SET provider_payment_id=NULL,first_post_at=now()-interval '23 hours 49 minutes 59 seconds' WHERE id=$1", [intent]);
+    const before = (await pool.query('SELECT checkout_snapshot,first_post_at FROM payment_intent WHERE id=$1', [intent])).rows[0];
+    let now = Date.now(), posts = 0, probes = 0, release!: () => void, entered!: () => void;
+    const barrier = new Promise<void>(resolve => { release = resolve; });
+    const reached = new Promise<void>(resolve => { entered = resolve; });
+    const clock = vi.spyOn(Date, 'now').mockImplementation(() => now);
+    try {
+      const cold = createYooKassaProvider({ fiscal, shopId: SHOP_ID, secretKey: SECRET, testMode: true,
+        fetchImpl: async (url, init) => {
+          if (String(url).endsWith('/me')) { probes++; entered(); await barrier; return Response.json({ account_id: SHOP_ID, test: true }); }
+          posts++; return fetch(yk.apiBase + '/payments', init);
+        } });
+      const attempt = wire(cold).checkout(a.token, request);
+      await reached; now += 2000; release();
+      const refused = await attempt;
+      expect([refused.status, refused.body.error?.code, refused.body.error?.intent_id]).toEqual([409, 'payment_reconciliation_required', intent]);
+      expect([probes, posts]).toEqual([1, 0]);
+      expect(await count('SELECT count(*) AS n FROM payment_intent WHERE account_id=$1', [a.id])).toBe(1);
+      const after = (await pool.query('SELECT checkout_snapshot,first_post_at,provider_payment_id FROM payment_intent WHERE id=$1', [intent])).rows[0];
+      expect(after).toEqual({ ...before, provider_payment_id: null });
+    } finally { release(); clock.mockRestore(); }
   });
 
 });

@@ -57,6 +57,8 @@ export type VerifiedNotification =
   | { readonly kind: 'ignored'; readonly event: string };
 
 export interface CreatePaymentInput {
+  /** Absolute end of the original provider idempotency window. Check at physical dispatch, after awaited preparation. */
+  readonly dispatchBeforeMs?: number;
   readonly serializedBody?: string;
   /** Наш идентификатор намерения. Он же идемпотентный ключ у провайдера. */
   readonly receipt: { email: string; fiscal: NonNullable<PaymentProvider['fiscal']> };

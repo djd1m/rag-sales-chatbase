@@ -121,6 +121,7 @@ export function createCheckoutHandler(deps: BillingDependencies) {
         return json({ error: { code: 'payment_reconciliation_required', intent_id: intent.id, message: 'Требуется сверка оплаты' } }, 409);
       const payment = await provider.createPayment({
         orderId: intent.id, amountMinor: intent.price_minor,
+        dispatchBeforeMs: intent.first_post_at.getTime() + (24 * 60 - 10) * 60_000,
         returnUrl: new URL(`/upgrade/return?intent=${intent.id}`, snapshot.publicOrigin).href,
         serializedBody: snapshot.serializedBody, description: snapshot.description, receipt: { email: snapshot.email, fiscal: snapshot.fiscal },
       });
@@ -134,6 +135,8 @@ export function createCheckoutHandler(deps: BillingDependencies) {
       if (bound.status !== 'created') return json({ data: { intent_id: intent.id, status: bound.status, redirect_url: null } });
       return json({ data: { intent_id: intent.id, redirect_url: payment.status === 'pending' ? payment.confirmationUrl : null, status: bound.status } }, 201);
     } catch (error) {
+      if (error instanceof PaymentProviderUnavailable && error.reason === 'idempotency_window_elapsed')
+        return json({ error: { code: 'payment_reconciliation_required', intent_id: intent.id, message: 'Требуется сверка оплаты' } }, 409);
       // Намерение остаётся created: повтор с тем же ключом попадёт в него же.
       if (error instanceof PaymentProviderUnavailable) return json({
         error: {

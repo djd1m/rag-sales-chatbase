@@ -1,6 +1,6 @@
 # Step 8 — независимая проверка итоговой реализации
 
-Нативный цикл **2 закрыт** установленным CLI: `closed`, exit 0, нет unresolved/reasons. Ревизия `5e1a319d77a4af6c78fca71e7d7421f8fade541283d0bb247ec63137dbc42ea0`, nonce `1a15881f-ce5b-4e63-817d-46995b3ef8d6`. Первая unresolved-история и отдельные неуспешные попытки сохранены; ничего не сбрасывалось. Это завершение локального QE, выпуск ещё ожидает Step 9 и проверки последующих OpenSpec-метаданных.
+Нативный финальный цикл **3 закрыт** установленным CLI: `closed`, exit 0, нет unresolved/reasons. Ревизия `2f9115154bbf2f8555a49561f21ce2a935ae2b57f6dca74ea1b2b6fa46978eb1`, nonce `ca249fa3-bf67-4130-86eb-4848b18b0d90`. Цикл 2 и четыре формальные роли Step 9 закрылись до записи последних трёх метаданных. Первая unresolved-история и неуспешные попытки сохранены. Продукт, тесты, producer и runtime не менялись; фактический выпуск ещё ожидается.
 
 QE-VERDICT: A-
 
@@ -73,3 +73,11 @@ QE-VERDICT: A-
 В текущем recall получено 0 подходящих записей dz и 0 AQE learning patterns. После закрытия gap loop сохранён один урок о повторной проверке абсолютного монотонного дедлайна: собственный bounded confidence 0,9 опирается на независимый RED/GREEN и новые 4824 точки, а не обещает все платформы. AQE MCP подтвердил KV store и query 1; semantic vector index недоступен, его успех не заявляется. Тот же текст отдельно записан через dz teach и перечитан отдельным recall. Начальная попытка private helper использовала неправильный Node PATH, сохранена как отказ; повтор с закреплённым Node выполнился без переустановки пакетов.
 
 Механический поиск unfinished-маркеров в 147 изменённых product/scripts/tests путях не обнаружил совпадений. Реальный project architecture guard прошёл; общий monorepo guard и его пределы описаны выше отдельно.
+
+### Фактический свежий metadata cycle 3
+
+Исходные роли повторно проверили ровно три документальных изменения; собственные оценки остались A-/A для CT и A-/A- для UI. Новый тестовый прогон не приписывается этому review.
+
+```json
+{"ok":true,"kind":"ledger","stage":"qe","verdict":"written","exit":0,"reason":"appended and verified by re-reading the tail","blocking":false,"target":"/home/rag-sales-chatbase/.dz/feature-adr/run-cost-ledger.jsonl"}
+```

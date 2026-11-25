@@ -1,0 +1,30 @@
+{
+  "captured": "2026-11-25",
+  "sufler_origin": "https://sufler.site",
+  "chatbase_origin": "https://www.chatbase.co",
+  "repository_revision_at_capture": "42f2430d4e176c21275fc0cf1c39309d0d7c69a4",
+  "container": "sufler-ui-audit-browser-1",
+  "playwright": "1.64.1",
+  "chromium": "156.0.8078.4",
+  "public_cases": 70,
+  "public_axe_runs": 20,
+  "public_axe_violations": 0,
+  "public_overflow_cases": 0,
+  "authenticated_empty_dashboard_cases": 8,
+  "authenticated_axe_violations": 0,
+  "proposed_cases": 33,
+  "proposed_axe_runs": 32,
+  "proposed_axe_violations": 0,
+  "proposed_js_error_cases": 0,
+  "paid_sufler_ai_calls": 0,
+  "production_changes": false,
+  "created_bots": 0,
+  "deleted_bots": 0,
+  "limits": [
+    "Only Chromium; WebKit/Safari not tested",
+    "Chatbase authenticated workspace not accessed",
+    "Sufler account empty; populated bot and install screens not inspected",
+    "Processing, answer and error states use browser-only fixture responses",
+    "No interviews or usability tests with real users; no quality benchmark of AI answers"
+  ]
+}

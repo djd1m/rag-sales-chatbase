@@ -1,0 +1,62 @@
+[
+  {
+    "name": "dashboard",
+    "file": "assets/chatbase-doc-dashboard.png",
+    "kind": "official-documentation-illustration",
+    "doc": "https://www.chatbase.co/docs/user-guides/quick-start/your-first-agent",
+    "imageUrl": "https://mintcdn.com/chatbase/xPpOvQF2MdeELnmI/user-guides/workspace/images/manage/team-manage-create-chatbot.png",
+    "alt": "The New AI Agent button on the Chatbase dashboard",
+    "downloaded": "2026-11-25",
+    "screenshotDate": "not-specified-by-publisher",
+    "sha256": "13aa59304d4a57f9d923a15f3608b75ecc9be4ddb7a09cf872b9cfa523322beb",
+    "mime": "image/png"
+  },
+  {
+    "name": "onboarding",
+    "file": "assets/chatbase-doc-onboarding.png",
+    "kind": "official-documentation-illustration",
+    "doc": "https://www.chatbase.co/docs/user-guides/quick-start/your-first-agent",
+    "imageUrl": "https://mintcdn.com/chatbase/BMkApe-2lPP5NZQg/user-guides/quick-start/images/first-agent/onboarding-sources.png",
+    "alt": "The How would you like to train your AI Agent? screen, with a website field, Other sources, and Add another source",
+    "downloaded": "2026-11-25",
+    "screenshotDate": "not-specified-by-publisher",
+    "sha256": "6acc617550572ec9f01044897dd26e8b047a0117d7f3801c5e5f0196b80e7b07",
+    "mime": "image/png"
+  },
+  {
+    "name": "files",
+    "file": "assets/chatbase-doc-files.png",
+    "kind": "official-documentation-illustration",
+    "doc": "https://www.chatbase.co/docs/user-guides/chatbot/data-sources",
+    "imageUrl": "https://mintcdn.com/chatbase/zTZRPKAb4DU-aGMx/user-guides/chatbot/images/sources/sources-files-1.png",
+    "alt": "Add file panel with drag-and-drop upload area",
+    "downloaded": "2026-11-25",
+    "screenshotDate": "not-specified-by-publisher",
+    "sha256": "6253f455a90aa7ebd1b5882355b0f6652d7ff7398b86d5e640936fd9a9dbf087",
+    "mime": "image/png"
+  },
+  {
+    "name": "playground",
+    "file": "assets/chatbase-doc-playground.png",
+    "kind": "official-documentation-illustration",
+    "doc": "https://www.chatbase.co/docs/user-guides/chatbot/playground",
+    "imageUrl": "https://mintcdn.com/chatbase/St1vNiMgEx0Vl5Y7/user-guides/chatbot/images/playground/playground.png",
+    "alt": "The Playground previewing an AI agent in the Chat Bubble channel",
+    "downloaded": "2026-11-25",
+    "screenshotDate": "not-specified-by-publisher",
+    "sha256": "49b93442b381afc9bcd19eef434554e52a8649e00fe21c3c6a4f192be870b8f8",
+    "mime": "image/png"
+  },
+  {
+    "name": "embed-code",
+    "file": "assets/chatbase-doc-embed-code.png",
+    "kind": "official-documentation-illustration",
+    "doc": "https://www.chatbase.co/docs/user-guides/quick-start/your-first-agent",
+    "imageUrl": "https://mintcdn.com/chatbase/xPpOvQF2MdeELnmI/user-guides/quick-start/images/first-agent/your-first-agent-script.png",
+    "alt": "JavaScript embed code ready to copy",
+    "downloaded": "2026-11-25",
+    "screenshotDate": "not-specified-by-publisher",
+    "sha256": "087fb6afbb9cb193b1de44cc0b0d01bb3e364c3402789f45a73f7f2b92617b16",
+    "mime": "image/png"
+  }
+]

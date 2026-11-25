@@ -61,4 +61,6 @@ docs/telemetry
 **/cookies*.json
 **/cookies*.txt
 **/*.bak
+# UI/UX-аудит использует отдельный образ; артефакты и cookie не входят в product build.
+tools/ui-ux-audit
 !docs/canon.md

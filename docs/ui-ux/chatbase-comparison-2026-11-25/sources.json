@@ -1,0 +1,122 @@
+[
+  {
+    "id": "chatbase-home",
+    "title": "Chatbase — главная",
+    "url": "https://www.chatbase.co/"
+  },
+  {
+    "id": "chatbase-pricing",
+    "title": "Chatbase — тарифы",
+    "url": "https://www.chatbase.co/pricing"
+  },
+  {
+    "id": "chatbase-login",
+    "title": "Chatbase — вход",
+    "url": "https://www.chatbase.co/auth/signin"
+  },
+  {
+    "id": "chatbase-start",
+    "title": "Chatbase — первый помощник",
+    "url": "https://www.chatbase.co/docs/user-guides/quick-start/your-first-agent"
+  },
+  {
+    "id": "chatbase-sources",
+    "title": "Chatbase — источники",
+    "url": "https://www.chatbase.co/docs/user-guides/chatbot/data-sources"
+  },
+  {
+    "id": "chatbase-playground",
+    "title": "Chatbase — Playground",
+    "url": "https://www.chatbase.co/docs/user-guides/chatbot/playground"
+  },
+  {
+    "id": "chatbase-deploy",
+    "title": "Chatbase — установка",
+    "url": "https://www.chatbase.co/docs/user-guides/chatbot/channels"
+  },
+  {
+    "id": "steps",
+    "title": "USWDS — Step indicator",
+    "url": "https://designsystem.digital.gov/components/step-indicator/"
+  },
+  {
+    "id": "disclosure",
+    "title": "NN/g — Progressive disclosure",
+    "url": "https://www.nngroup.com/articles/progressive-disclosure/"
+  },
+  {
+    "id": "onboarding",
+    "title": "NN/g — Onboarding tutorials",
+    "url": "https://www.nngroup.com/articles/onboarding-tutorials/"
+  },
+  {
+    "id": "input",
+    "title": "GOV.UK — Text input",
+    "url": "https://design-system.service.gov.uk/components/text-input/"
+  },
+  {
+    "id": "file",
+    "title": "GOV.UK — File upload",
+    "url": "https://design-system.service.gov.uk/components/file-upload/"
+  },
+  {
+    "id": "errors",
+    "title": "GOV.UK — Error summary",
+    "url": "https://design-system.service.gov.uk/components/error-summary/"
+  },
+  {
+    "id": "validation",
+    "title": "GOV.UK — Validation",
+    "url": "https://design-system.service.gov.uk/patterns/validation/"
+  },
+  {
+    "id": "empty",
+    "title": "NN/g — Empty states",
+    "url": "https://www.nngroup.com/articles/empty-state-interface-design/"
+  },
+  {
+    "id": "trust",
+    "title": "Google PAIR — Explainability + Trust",
+    "url": "https://pair.withgoogle.com/guidebook-v2/chapter/explainability-trust/"
+  },
+  {
+    "id": "failure",
+    "title": "Google PAIR — Errors + graceful failure",
+    "url": "https://pair.withgoogle.com/guidebook-v2/chapter/errors-failing/"
+  },
+  {
+    "id": "hax",
+    "title": "Microsoft HAX — границы возможностей",
+    "url": "https://www.microsoft.com/en-us/haxtoolkit/guideline/make-clear-what-the-system-can-do/"
+  },
+  {
+    "id": "reflow",
+    "title": "W3C — Reflow",
+    "url": "https://www.w3.org/WAI/WCAG22/Understanding/reflow"
+  },
+  {
+    "id": "status",
+    "title": "W3C — Status messages",
+    "url": "https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html"
+  },
+  {
+    "id": "focus",
+    "title": "W3C — Focus visible",
+    "url": "https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html"
+  },
+  {
+    "id": "targets",
+    "title": "W3C — Target size minimum",
+    "url": "https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html"
+  },
+  {
+    "id": "contrast",
+    "title": "W3C — Contrast minimum",
+    "url": "https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html"
+  },
+  {
+    "id": "process",
+    "title": "USWDS — Process list",
+    "url": "https://designsystem.digital.gov/components/process-list/"
+  }
+]

@@ -1,0 +1,16 @@
+{
+  "p1Visible": 5,
+  "images": 27,
+  "brokenImages": 0,
+  "mobileOverflow": false,
+  "jsErrors": [],
+  "checks": [
+    "9-cards",
+    "priority-filter",
+    "viewport-switch",
+    "image-dialog-and-Escape",
+    "local-decision-persistence",
+    "all-images-decoded",
+    "mobile-layout"
+  ]
+}

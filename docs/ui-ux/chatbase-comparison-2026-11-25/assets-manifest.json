@@ -1,0 +1,302 @@
+[
+  {
+    "file": "assets/sufler-home-dark-1440.png",
+    "sha256": "4d37279251b822ec27b79f84258c1eb301fa830847118992d18b100e2ad923e5",
+    "origin": "public/sufler-home-dark-1440.png"
+  },
+  {
+    "file": "assets/sufler-home-dark-390.png",
+    "sha256": "de31ba6dd94e8b3c1c09bd3dcfdc93a9823119bb74579c031cc4ce84a44b61a7",
+    "origin": "public/sufler-home-dark-390.png"
+  },
+  {
+    "file": "assets/chatbase-home-1440.png",
+    "sha256": "d45af02cb4579a892c91bb042dd55761732755637934de855cc0111e78b35549",
+    "origin": "scenarios/chatbase-home-1440.png"
+  },
+  {
+    "file": "assets/chatbase-home-390.png",
+    "sha256": "3043edc59e352410bc8fe3fa539a7e137957190c7494fe140e0a5c7c0029396b",
+    "origin": "scenarios/chatbase-home-390.png"
+  },
+  {
+    "file": "assets/proposed-landing-dark-1440.png",
+    "sha256": "9daf5f855aed6fb9d84cf46f14699842d0684a78b4cff787361254e59e5fa777",
+    "origin": "proposed/proposed-landing-dark-1440.png"
+  },
+  {
+    "file": "assets/proposed-landing-dark-390.png",
+    "sha256": "96ab936e8428ce23954028efb9ce779f5f121aa0bbd21d6d6a2ec63d921215b0",
+    "origin": "proposed/proposed-landing-dark-390.png"
+  },
+  {
+    "file": "assets/sufler-preview-dark-1440.png",
+    "sha256": "b3696c78abe9a80b3b9ac91382366d5387853638b6fd41d55b9b6713e13116fa",
+    "origin": "public/sufler-preview-dark-1440.png"
+  },
+  {
+    "file": "assets/sufler-preview-dark-390.png",
+    "sha256": "46978de47ccf919d78388f00da2c33b02cdde89a34dd6a6b1056a65c6f10fcf1",
+    "origin": "public/sufler-preview-dark-390.png"
+  },
+  {
+    "file": "assets/chatbase-doc-onboarding.png",
+    "sha256": "6acc617550572ec9f01044897dd26e8b047a0117d7f3801c5e5f0196b80e7b07",
+    "origin": "reference/chatbase-doc-onboarding.png"
+  },
+  {
+    "file": "assets/proposed-sources-dark-1440.png",
+    "sha256": "b19db8c9b7db22c68cd4a7863920c4c180a794d7f496c0b8daf2b88cf998ca93",
+    "origin": "proposed/proposed-sources-dark-1440.png"
+  },
+  {
+    "file": "assets/proposed-sources-dark-390.png",
+    "sha256": "eb7d351623f4a709ba74a161bdf8ae30a27947645f3e64ca861c9726812be6f7",
+    "origin": "proposed/proposed-sources-dark-390.png"
+  },
+  {
+    "file": "assets/sufler-dashboard-dark-1440.png",
+    "sha256": "bfa00fa1259c7f1d9ca031044dbcdea410d520ef00d08197b7bbc8fab990934a",
+    "origin": "scenarios/sufler-dashboard-dark-1440.png"
+  },
+  {
+    "file": "assets/sufler-dashboard-dark-390.png",
+    "sha256": "4f18e39af6765953142097303f763056d2fc123d08314626f442e6953a8f3f14",
+    "origin": "scenarios/sufler-dashboard-dark-390.png"
+  },
+  {
+    "file": "assets/chatbase-doc-dashboard.png",
+    "sha256": "13aa59304d4a57f9d923a15f3608b75ecc9be4ddb7a09cf872b9cfa523322beb",
+    "origin": "reference/chatbase-doc-dashboard.png"
+  },
+  {
+    "file": "assets/proposed-dashboard-dark-1440.png",
+    "sha256": "97c3ef6e9ce27b42b7e2a3ea2ff0ccc2a603ac44388855dccd571441781fc4cf",
+    "origin": "proposed/proposed-dashboard-dark-1440.png"
+  },
+  {
+    "file": "assets/proposed-dashboard-dark-390.png",
+    "sha256": "7a387eefc1d99937b7ef8d2ff8ab3220a4540d65acc9bc3eb2e18bb766973a59",
+    "origin": "proposed/proposed-dashboard-dark-390.png"
+  },
+  {
+    "file": "assets/sufler-login-dark-1440.png",
+    "sha256": "b7504c905cbb5ddfc567ef0d73e76f1bbb7062fd8bfd8624338a5815d1eaa684",
+    "origin": "public/sufler-login-dark-1440.png"
+  },
+  {
+    "file": "assets/sufler-login-dark-390.png",
+    "sha256": "cd9a1f5833d08194a5a7c0766235065a395112e191de47aa546ef411dcbd3c61",
+    "origin": "public/sufler-login-dark-390.png"
+  },
+  {
+    "file": "assets/chatbase-login-1440.png",
+    "sha256": "f74dc93a4e08c412785f866cea617df4913c9f94e1f2b511e4e66d341e4a33a6",
+    "origin": "scenarios/chatbase-login-1440.png"
+  },
+  {
+    "file": "assets/chatbase-login-390.png",
+    "sha256": "af5474ebc7e25fd3592c6ecd88daf634c72e66aecf1958023e9af29a8367c192",
+    "origin": "scenarios/chatbase-login-390.png"
+  },
+  {
+    "file": "assets/proposed-login-dark-1440.png",
+    "sha256": "d036fc9344d872dcd477b78233775ec8caa1c3523bcdc7fe9d07b77e34b774c8",
+    "origin": "proposed/proposed-login-dark-1440.png"
+  },
+  {
+    "file": "assets/proposed-login-dark-390.png",
+    "sha256": "6ef9757e920aeb9a0b3836d5e806bab97410146e58b3d21176909b5da306cf8d",
+    "origin": "proposed/proposed-login-dark-390.png"
+  },
+  {
+    "file": "assets/sufler-pricing-dark-1440.png",
+    "sha256": "c1144efcf855ef0d353558f9bb4e144480caee0f96ac9b97a2d856b4b81ff429",
+    "origin": "public/sufler-pricing-dark-1440.png"
+  },
+  {
+    "file": "assets/sufler-pricing-dark-390.png",
+    "sha256": "697569e4a6e11bb8615fc4a3be042640b2c5dff169696ed71d8577fba9ced5df",
+    "origin": "public/sufler-pricing-dark-390.png"
+  },
+  {
+    "file": "assets/chatbase-pricing-1440.png",
+    "sha256": "6e790dde6d0038f94af0ac76a32a8a0b49085930f3c340793004990368a91bec",
+    "origin": "scenarios/chatbase-pricing-1440.png"
+  },
+  {
+    "file": "assets/chatbase-pricing-390.png",
+    "sha256": "94de7d2f7cd90960e8633466d3db2b361e8fa0b15d6ccfd024d1b2827655aef5",
+    "origin": "scenarios/chatbase-pricing-390.png"
+  },
+  {
+    "file": "assets/proposed-pricing-dark-1440.png",
+    "sha256": "608bf87286e0b3d155d4624a460133632d1d8d272ae029a2986aaa1c3656cd8c",
+    "origin": "proposed/proposed-pricing-dark-1440.png"
+  },
+  {
+    "file": "assets/proposed-pricing-dark-390.png",
+    "sha256": "292f2d9da1293dab06c1bc51e8a76e5b8579e029ba8e01d640c643f294007442",
+    "origin": "proposed/proposed-pricing-dark-390.png"
+  },
+  {
+    "file": "assets/sufler-preview-failed-1440.png",
+    "sha256": "c87741384c27e53efad9727e30bb126f4defc300f011dc5a997c2e39c2d5de5f",
+    "origin": "scenarios/sufler-preview-failed-1440.png"
+  },
+  {
+    "file": "assets/sufler-preview-failed-390.png",
+    "sha256": "a126e79946c88c06369ab3fce65103d5fc0fc7f1c090583dec6ef865aa938f44",
+    "origin": "scenarios/sufler-preview-failed-390.png"
+  },
+  {
+    "file": "assets/chatbase-doc-files.png",
+    "sha256": "6253f455a90aa7ebd1b5882355b0f6652d7ff7398b86d5e640936fd9a9dbf087",
+    "origin": "reference/chatbase-doc-files.png"
+  },
+  {
+    "file": "assets/proposed-processing-dark-1440.png",
+    "sha256": "056392f1ccb73f0bbd3531641af7a977e06ce279e833acb30364a00511be7197",
+    "origin": "proposed/proposed-processing-dark-1440.png"
+  },
+  {
+    "file": "assets/proposed-processing-dark-390.png",
+    "sha256": "d0b49b09b926cea6f18998c081091222cf3d40bba84864a91bce4cfe1f74d1a6",
+    "origin": "proposed/proposed-processing-dark-390.png"
+  },
+  {
+    "file": "assets/sufler-preview-answer-1440.png",
+    "sha256": "bed92a6ff5b9329bb730b59a20e6f8c8b0c3f60c524cad42958b2524db1e68e9",
+    "origin": "scenarios/sufler-preview-answer-1440.png"
+  },
+  {
+    "file": "assets/sufler-preview-answer-390.png",
+    "sha256": "f3ce56ab11f19160f574677d1fc2fd73071fd87a166857c7d5c6dd69de83a4e0",
+    "origin": "scenarios/sufler-preview-answer-390.png"
+  },
+  {
+    "file": "assets/chatbase-doc-playground.png",
+    "sha256": "49b93442b381afc9bcd19eef434554e52a8649e00fe21c3c6a4f192be870b8f8",
+    "origin": "reference/chatbase-doc-playground.png"
+  },
+  {
+    "file": "assets/proposed-verify-dark-1440.png",
+    "sha256": "282337d966e73ba23d7890708d289c5e47757294fd1d6c104deabee5adb9a52f",
+    "origin": "proposed/proposed-verify-dark-1440.png"
+  },
+  {
+    "file": "assets/proposed-verify-dark-390.png",
+    "sha256": "dca647f049ee9ae50723315dbe7eb528e8842efff806bf6d99a0b2ed0cd00234",
+    "origin": "proposed/proposed-verify-dark-390.png"
+  },
+  {
+    "file": "assets/sufler-mobile-320x568.png",
+    "sha256": "8f1aa2b40b5bdeb5f324713e0adafe8eb94eb0e3c6423757a075702290beecbd",
+    "origin": "scenarios/sufler-mobile-320x568.png"
+  },
+  {
+    "file": "assets/chatbase-home-320x568.png",
+    "sha256": "486361d14e9fd01725c2995ad96897d8b775f66648114f5a83ec5355df9010d5",
+    "origin": "scenarios/chatbase-home-320x568.png"
+  },
+  {
+    "file": "assets/proposed-landing-dark-320x568.png",
+    "sha256": "86e13b6f40c0c789cb15d0758644815f3de907ed0f59364996e1cc83fac5da9c",
+    "origin": "proposed/proposed-landing-dark-320x568.png"
+  },
+  {
+    "file": "assets/chatbase-doc-embed-code.png",
+    "sha256": "087fb6afbb9cb193b1de44cc0b0d01bb3e364c3402789f45a73f7f2b92617b16",
+    "origin": "reference/chatbase-doc-embed-code.png"
+  },
+  {
+    "file": "assets/proposed-install-dark-1440.png",
+    "sha256": "50a8e4cc68866c5b13004ac5f95f7c5f344020f1350d40df23f4f1ee7cb70526",
+    "origin": "proposed/proposed-install-dark-1440.png"
+  },
+  {
+    "file": "assets/proposed-install-dark-390.png",
+    "sha256": "cc52463474d8c4ca77f7480c1639c8c8612c877c3c3769241b63b4bb63adc958",
+    "origin": "proposed/proposed-install-dark-390.png"
+  },
+  {
+    "file": "assets/proposed-verify-light-1440.png",
+    "sha256": "ddc3b0976dbbfd06c16ce4c9401f0268a4ded00444c198d036cef83c1e920389",
+    "origin": "proposed/proposed-verify-light-1440.png"
+  },
+  {
+    "file": "assets/proposed-landing-light-1440.png",
+    "sha256": "afa0f3c81c28dd96a835e3a93c13f08a0c2ab4ec17aa48c8376ec7b87af01fb0",
+    "origin": "proposed/proposed-landing-light-1440.png"
+  },
+  {
+    "file": "assets/proposed-processing-light-1440.png",
+    "sha256": "3bba10b06c471ec9e6f75b55852f213243c49ff7cd0cf38e65752b22b66428a2",
+    "origin": "proposed/proposed-processing-light-1440.png"
+  },
+  {
+    "file": "assets/proposed-pricing-light-390.png",
+    "sha256": "dbde1fd03832871a0343e8bb77c755aebfba5106a3bc25f279af884882b46bd6",
+    "origin": "proposed/proposed-pricing-light-390.png"
+  },
+  {
+    "file": "assets/proposed-processing-light-390.png",
+    "sha256": "4eb6bd83349d59d6514311d1befd735d9a596efca0037884b562db3127ed7c4e",
+    "origin": "proposed/proposed-processing-light-390.png"
+  },
+  {
+    "file": "assets/proposed-login-light-1440.png",
+    "sha256": "27cddc7312e473e1e578dec5ac1e885c029e8dc0e6721b040432f37160a32626",
+    "origin": "proposed/proposed-login-light-1440.png"
+  },
+  {
+    "file": "assets/proposed-pricing-light-1440.png",
+    "sha256": "9d8cdb16881dcaaab3ce8970f9b860719bee2dfb53d9aa25967bea6b1a7ee86e",
+    "origin": "proposed/proposed-pricing-light-1440.png"
+  },
+  {
+    "file": "assets/proposed-sources-light-390.png",
+    "sha256": "fc8cb07944017a9b72ed143b727d09d96eb10ccf6b2df5d87227ccc62175806d",
+    "origin": "proposed/proposed-sources-light-390.png"
+  },
+  {
+    "file": "assets/proposed-dashboard-light-390.png",
+    "sha256": "2a47d395b2927b5eb11fc6d1ed8604f302dd86a827f670fd258262d525c78dd7",
+    "origin": "proposed/proposed-dashboard-light-390.png"
+  },
+  {
+    "file": "assets/proposed-install-light-1440.png",
+    "sha256": "fc51b82a58ab9a0702de3382f27aa29693ba5880373a6eb87c906fc93149f854",
+    "origin": "proposed/proposed-install-light-1440.png"
+  },
+  {
+    "file": "assets/proposed-verify-light-390.png",
+    "sha256": "66bc671b2eef29b0338353a5cea44390027d08a2f61bef98fb358087a636702c",
+    "origin": "proposed/proposed-verify-light-390.png"
+  },
+  {
+    "file": "assets/proposed-dashboard-light-1440.png",
+    "sha256": "c3979d580d72f1f718bbe9a398ae3d65408974fbbce6e962352c7d8f8bb313aa",
+    "origin": "proposed/proposed-dashboard-light-1440.png"
+  },
+  {
+    "file": "assets/proposed-landing-light-390.png",
+    "sha256": "33fdf1d3d3dda9d1862d0c54379cc7e8390bd1a037ac544befecb2bdc66ef7d3",
+    "origin": "proposed/proposed-landing-light-390.png"
+  },
+  {
+    "file": "assets/proposed-install-light-390.png",
+    "sha256": "edf211abfbba0e08ef238430b236c6f078919482a92470951b21524b90cdba26",
+    "origin": "proposed/proposed-install-light-390.png"
+  },
+  {
+    "file": "assets/proposed-sources-light-1440.png",
+    "sha256": "06f10c76c125c93778059c6f366f31e3abe718cbe9939812698e00a1a192f938",
+    "origin": "proposed/proposed-sources-light-1440.png"
+  },
+  {
+    "file": "assets/proposed-login-light-390.png",
+    "sha256": "6d8549fbac2bc9d1ea4ecaa2a66843bb15f0cb83856fdee137a6d7ae60d2087d",
+    "origin": "proposed/proposed-login-light-390.png"
+  }
+]

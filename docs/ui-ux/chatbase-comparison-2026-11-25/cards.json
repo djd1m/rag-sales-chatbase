@@ -1,0 +1,330 @@
+[
+  {
+    "id": "U01",
+    "priority": "P2",
+    "title": "Показать продукт уже в первом экране",
+    "kind": "Дизайнерская гипотеза",
+    "screen": "landing",
+    "current": "assets/sufler-home-dark-1440.png",
+    "currentMobile": "assets/sufler-home-dark-390.png",
+    "reference": "assets/chatbase-home-1440.png",
+    "referenceMobile": "assets/chatbase-home-390.png",
+    "referenceKind": "Живой публичный экран Chatbase",
+    "currentKind": "Живой публичный экран Суфлёра",
+    "problem": "На десктопе первый экран занят текстом и формой слева; пример ответа находится ниже. Справа нет изображения самого продукта.",
+    "original": "В первом экране Chatbase показан интерфейс продукта рядом с предложением начать.",
+    "proposal": "Сократить заголовок и рядом показать условный диалог с источником. Сохранить возможность попробовать до регистрации.",
+    "acceptance": "На 1440×900 видны обещание, поле, основное действие и пример ответа. Пример явно помечен как демонстрационный.",
+    "effort": "UI и тексты",
+    "sources": [
+      {
+        "title": "Chatbase — главная",
+        "url": "https://www.chatbase.co/"
+      },
+      {
+        "title": "Microsoft HAX — границы возможностей",
+        "url": "https://www.microsoft.com/en-us/haxtoolkit/guideline/make-clear-what-the-system-can-do/"
+      },
+      {
+        "title": "Google PAIR — Explainability + Trust",
+        "url": "https://pair.withgoogle.com/guidebook-v2/chapter/explainability-trust/"
+      }
+    ],
+    "proposed": "assets/proposed-landing-dark-1440.png",
+    "proposedMobile": "assets/proposed-landing-dark-390.png",
+    "prototype": "prototype.html?screen=landing"
+  },
+  {
+    "id": "U02",
+    "priority": "P1",
+    "title": "Сразу объяснить выбор «сайт или PDF»",
+    "kind": "Наблюдение + предложение",
+    "screen": "sources",
+    "current": "assets/sufler-preview-dark-1440.png",
+    "currentMobile": "assets/sufler-preview-dark-390.png",
+    "reference": "assets/chatbase-doc-onboarding.png",
+    "referenceKind": "Иллюстрация официальной документации Chatbase",
+    "currentKind": "Живой публичный экран /preview",
+    "problem": "Первый шаг предлагает только адрес сайта. Возможность PDF упоминается на лендинге, но отдельного входа в этот сценарий на форме нет.",
+    "original": "Документация показывает ввод сайта и выбор других источников в одном шаге.",
+    "proposal": "Единый выбор «Сайт / PDF» с понятными ограничениями. Загрузка PDF остаётся в авторизованном кабинете; публичный переход должен явно вести к входу.",
+    "acceptance": "Путь к сайту и путь к PDF видны до ввода. Ограничения указаны рядом; выбранный способ не теряется после входа.",
+    "effort": "UI + навигация и сохранение выбора",
+    "sources": [
+      {
+        "title": "Chatbase — первый помощник",
+        "url": "https://www.chatbase.co/docs/user-guides/quick-start/your-first-agent"
+      },
+      {
+        "title": "Chatbase — источники",
+        "url": "https://www.chatbase.co/docs/user-guides/chatbot/data-sources"
+      },
+      {
+        "title": "GOV.UK — Text input",
+        "url": "https://design-system.service.gov.uk/components/text-input/"
+      },
+      {
+        "title": "GOV.UK — File upload",
+        "url": "https://design-system.service.gov.uk/components/file-upload/"
+      }
+    ],
+    "proposed": "assets/proposed-sources-dark-1440.png",
+    "proposedMobile": "assets/proposed-sources-dark-390.png",
+    "prototype": "prototype.html?screen=sources"
+  },
+  {
+    "id": "U03",
+    "priority": "P1",
+    "title": "Превратить пустой кабинет в короткий первый запуск",
+    "kind": "Дизайнерская гипотеза",
+    "screen": "dashboard",
+    "current": "assets/sufler-dashboard-dark-1440.png",
+    "currentMobile": "assets/sufler-dashboard-dark-390.png",
+    "reference": "assets/chatbase-doc-dashboard.png",
+    "referenceKind": "Иллюстрация официальной документации Chatbase",
+    "currentKind": "Живой кабинет предоставленного тестового аккаунта",
+    "problem": "В пустом кабинете одновременно показаны путь через сайт и полная форма ручного создания. Пользователь выбирает способ и заполняет дополнительные сведения до знакомства с материалами.",
+    "original": "На иллюстрации Chatbase есть явное действие создания агента; дальнейшие шаги описаны последовательно.",
+    "proposal": "Один основной старт с источника и видимый путь «Материалы → Проверка → Установка». Ручной способ раскрывать по запросу.",
+    "acceptance": "Владелец без подсказки называет текущий и следующий шаг. Для старта с сайтом на основном экране одно поле; альтернативный путь доступен явно.",
+    "effort": "UI + навигация",
+    "sources": [
+      {
+        "title": "Chatbase — первый помощник",
+        "url": "https://www.chatbase.co/docs/user-guides/quick-start/your-first-agent"
+      },
+      {
+        "title": "USWDS — Step indicator",
+        "url": "https://designsystem.digital.gov/components/step-indicator/"
+      },
+      {
+        "title": "NN/g — Progressive disclosure",
+        "url": "https://www.nngroup.com/articles/progressive-disclosure/"
+      },
+      {
+        "title": "NN/g — Empty states",
+        "url": "https://www.nngroup.com/articles/empty-state-interface-design/"
+      }
+    ],
+    "proposed": "assets/proposed-dashboard-dark-1440.png",
+    "proposedMobile": "assets/proposed-dashboard-dark-390.png",
+    "prototype": "prototype.html?screen=dashboard"
+  },
+  {
+    "id": "U04",
+    "priority": "P1",
+    "title": "Помочь вернуться в аккаунт",
+    "kind": "Наблюдение + новая функция",
+    "screen": "login",
+    "current": "assets/sufler-login-dark-1440.png",
+    "currentMobile": "assets/sufler-login-dark-390.png",
+    "reference": "assets/chatbase-login-1440.png",
+    "referenceMobile": "assets/chatbase-login-390.png",
+    "referenceKind": "Живой публичный экран Chatbase",
+    "currentKind": "Живой публичный экран входа",
+    "problem": "На форме нет видимого пути восстановления пароля и переключателя его видимости. Вход по действующему паролю проверен успешно.",
+    "original": "В Chatbase на экране входа видны восстановление пароля и управление его видимостью.",
+    "proposal": "Добавить «Не помню пароль» и «Показать / Скрыть». Сохранить простой вход по почте; восстановление проектировать как полный серверный сценарий с письмом.",
+    "acceptance": "Видимость управляется с клавиатуры и отражается в aria-pressed. Восстановление показывает отдельные успех и ошибку и не ограничивается декоративной ссылкой.",
+    "effort": "Переключатель — UI; восстановление — API + письмо",
+    "sources": [
+      {
+        "title": "Chatbase — вход",
+        "url": "https://www.chatbase.co/auth/signin"
+      },
+      {
+        "title": "GOV.UK — Text input",
+        "url": "https://design-system.service.gov.uk/components/text-input/"
+      },
+      {
+        "title": "GOV.UK — Error summary",
+        "url": "https://design-system.service.gov.uk/components/error-summary/"
+      },
+      {
+        "title": "W3C — Focus visible",
+        "url": "https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html"
+      }
+    ],
+    "proposed": "assets/proposed-login-dark-1440.png",
+    "proposedMobile": "assets/proposed-login-dark-390.png",
+    "prototype": "prototype.html?screen=login"
+  },
+  {
+    "id": "U05",
+    "priority": "P2",
+    "title": "Объяснить тариф через задачу бизнеса",
+    "kind": "Гипотеза понятности",
+    "screen": "pricing",
+    "current": "assets/sufler-pricing-dark-1440.png",
+    "currentMobile": "assets/sufler-pricing-dark-390.png",
+    "reference": "assets/chatbase-pricing-1440.png",
+    "referenceMobile": "assets/chatbase-pricing-390.png",
+    "referenceKind": "Живой публичный экран Chatbase",
+    "currentKind": "Живой публичный экран тарифов",
+    "problem": "Названия «Без бейджа» и «Студия» требуют понимания терминов. Обоснование отметки «Чаще выбирают» этим аудитом не проверялось.",
+    "original": "Карточки Chatbase поясняют, для какого типа команды предназначен план.",
+    "proposal": "Назвать задачи: «Попробовать», «Для своего сайта», «Для студии». Объяснить подпись простыми словами, сохранить реальные цены, лимиты, предварительность и оплату на 30 дней.",
+    "acceptance": "В пяти пользовательских сессиях проверить понимание различий и условий; целевой результат определить до теста. Цены и возможности не меняются ради дизайна.",
+    "effort": "UI и тексты; продуктовая сверка условий",
+    "sources": [
+      {
+        "title": "Chatbase — тарифы",
+        "url": "https://www.chatbase.co/pricing"
+      },
+      {
+        "title": "NN/g — Progressive disclosure",
+        "url": "https://www.nngroup.com/articles/progressive-disclosure/"
+      }
+    ],
+    "proposed": "assets/proposed-pricing-dark-1440.png",
+    "proposedMobile": "assets/proposed-pricing-dark-390.png",
+    "prototype": "prototype.html?screen=pricing"
+  },
+  {
+    "id": "U06",
+    "priority": "P1",
+    "title": "Из ошибки вести к выполнимому действию",
+    "kind": "UX-несогласованность в воспроизведённом состоянии",
+    "screen": "processing",
+    "current": "assets/sufler-preview-failed-1440.png",
+    "currentMobile": "assets/sufler-preview-failed-390.png",
+    "reference": "assets/chatbase-doc-files.png",
+    "referenceKind": "Иллюстрация официальной документации Chatbase",
+    "currentKind": "Настоящий frontend; состояние failed подменено в браузере",
+    "problem": "При robots_disallowed текст предлагает сохранить бота и загрузить PDF, но единственная кнопка — «Попробовать другой адрес». Прямого перехода к предложенному PDF на экране нет.",
+    "original": "В документации Chatbase показан отдельный выбор и диалог загрузки файла.",
+    "proposal": "Дать два конкретных выхода: PDF и другой адрес. Объяснить необходимость входа для PDF, сохранить введённый адрес; технический ID убрать из основного сообщения.",
+    "acceptance": "Из ошибочного состояния можно перейти к PDF по видимому действию. Проверить последовательность с входом и обратным переходом; не обещать сохранение несуществующего бота.",
+    "effort": "UI + маршрутизация; проверить условия сохранения",
+    "sources": [
+      {
+        "title": "Chatbase — источники",
+        "url": "https://www.chatbase.co/docs/user-guides/chatbot/data-sources"
+      },
+      {
+        "title": "Google PAIR — Errors + graceful failure",
+        "url": "https://pair.withgoogle.com/guidebook-v2/chapter/errors-failing/"
+      },
+      {
+        "title": "GOV.UK — Error summary",
+        "url": "https://design-system.service.gov.uk/components/error-summary/"
+      },
+      {
+        "title": "GOV.UK — Validation",
+        "url": "https://design-system.service.gov.uk/patterns/validation/"
+      },
+      {
+        "title": "W3C — Status messages",
+        "url": "https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html"
+      }
+    ],
+    "proposed": "assets/proposed-processing-dark-1440.png",
+    "proposedMobile": "assets/proposed-processing-dark-390.png",
+    "prototype": "prototype.html?screen=processing&state=error"
+  },
+  {
+    "id": "U07",
+    "priority": "P1",
+    "title": "Отделить проверку ответа от призыва к сохранению",
+    "kind": "Гипотеза рабочего сценария",
+    "screen": "verify",
+    "current": "assets/sufler-preview-answer-1440.png",
+    "currentMobile": "assets/sufler-preview-answer-390.png",
+    "reference": "assets/chatbase-doc-playground.png",
+    "referenceKind": "Иллюстрация официальной документации Chatbase",
+    "currentKind": "Настоящий frontend; ответ и источник подменены в браузере",
+    "problem": "После первого ответа в ленте появляются сохранение и публикация ссылки. Источник уже виден — это сильная сторона, которую важно сохранить.",
+    "original": "Playground визуально отделяет рабочие настройки, предпросмотр и действие установки; документация рекомендует проверять и вопросы вне базы.",
+    "proposal": "Проверка по короткому списку: обычный вопрос, нехватка данных, контакт человека. Источник вынести в соседнюю панель; переход к установке — отдельно от сообщения.",
+    "acceptance": "Можно проверить фрагмент и не потерять вопрос. Повторная отметка того же сценария не увеличивает счётчик. Чек-лист не означает гарантии качества всех ответов.",
+    "effort": "UI; сохранение списка проверок потребует отдельного решения",
+    "sources": [
+      {
+        "title": "Chatbase — Playground",
+        "url": "https://www.chatbase.co/docs/user-guides/chatbot/playground"
+      },
+      {
+        "title": "Google PAIR — Explainability + Trust",
+        "url": "https://pair.withgoogle.com/guidebook-v2/chapter/explainability-trust/"
+      },
+      {
+        "title": "Google PAIR — Errors + graceful failure",
+        "url": "https://pair.withgoogle.com/guidebook-v2/chapter/errors-failing/"
+      },
+      {
+        "title": "Microsoft HAX — границы возможностей",
+        "url": "https://www.microsoft.com/en-us/haxtoolkit/guideline/make-clear-what-the-system-can-do/"
+      }
+    ],
+    "proposed": "assets/proposed-verify-dark-1440.png",
+    "proposedMobile": "assets/proposed-verify-dark-390.png",
+    "prototype": "prototype.html?screen=verify"
+  },
+  {
+    "id": "U08",
+    "priority": "P2",
+    "title": "Уместить главное действие на коротком экране",
+    "kind": "Измеренное наблюдение + макет",
+    "screen": "landing",
+    "current": "assets/sufler-mobile-320x568.png",
+    "reference": "assets/chatbase-home-320x568.png",
+    "referenceKind": "Живой публичный Chatbase, тот же viewport 320×568",
+    "currentKind": "Живой мобильный viewport 320×568",
+    "problem": "На 320×568 кнопка создания находится на y=691…739, ниже первого экрана. На 375×667 и 390×844 основное действие уже помещается — общей поломки мобильной версии нет.",
+    "original": "На том же viewport кнопка Chatbase расположена на y=561…609 и тоже видна не полностью. Композиционный ориентир требует адаптации под нашу цель.",
+    "proposal": "Сократить первый экран, сохранить подпись поля и явную PDF-альтернативу. В макете на 320×568 кнопка расположена на y=494…542.",
+    "acceptance": "Поле и основная кнопка полностью доступны в первом экране 320×568; нет горизонтальной прокрутки, поля не меньше 16 px, клавиатурный фокус видим.",
+    "effort": "UI и тексты",
+    "sources": [
+      {
+        "title": "W3C — Reflow",
+        "url": "https://www.w3.org/WAI/WCAG22/Understanding/reflow"
+      },
+      {
+        "title": "GOV.UK — Text input",
+        "url": "https://design-system.service.gov.uk/components/text-input/"
+      },
+      {
+        "title": "W3C — Target size minimum",
+        "url": "https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html"
+      }
+    ],
+    "proposed": "assets/proposed-landing-dark-320x568.png",
+    "proposedMobile": "assets/proposed-landing-dark-320x568.png",
+    "prototype": "prototype.html?screen=landing"
+  },
+  {
+    "id": "U09",
+    "priority": "P2",
+    "title": "Установка: скопировать → разместить → проверить",
+    "kind": "Концепт для дополнительной проверки",
+    "screen": "install",
+    "current": "assets/sufler-preview-answer-1440.png",
+    "currentMobile": "assets/sufler-preview-answer-390.png",
+    "reference": "assets/chatbase-doc-embed-code.png",
+    "referenceKind": "Иллюстрация официальной документации Chatbase",
+    "currentKind": "Последний проверенный переход; сам экран установки не исследован",
+    "problem": "В предоставленном аккаунте нет ботов. Текущий заполненный кабинет и установка не проверены; отсутствие каких-либо функций не утверждается.",
+    "original": "Инструкция Chatbase разделяет копирование embed-кода и проверку виджета на настоящем сайте.",
+    "proposal": "Собрать установку в три шага и отделить «код скопирован» от «виджет работает». Это кандидат для сверки после появления тестового бота, не готовое требование переделки.",
+    "acceptance": "Сперва проверить текущий экран с тестовым ботом. Подтверждать установку только реальным событием или явно обозначенной ручной проверкой.",
+    "effort": "Сначала дополнительный аудит; затем оценка",
+    "sources": [
+      {
+        "title": "Chatbase — установка",
+        "url": "https://www.chatbase.co/docs/user-guides/chatbot/channels"
+      },
+      {
+        "title": "USWDS — Process list",
+        "url": "https://designsystem.digital.gov/components/process-list/"
+      },
+      {
+        "title": "W3C — Status messages",
+        "url": "https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html"
+      }
+    ],
+    "proposed": "assets/proposed-install-dark-1440.png",
+    "proposedMobile": "assets/proposed-install-dark-390.png",
+    "prototype": "prototype.html?screen=install"
+  }
+]

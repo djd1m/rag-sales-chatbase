@@ -1,0 +1,26 @@
+name: sufler-ui-audit
+services:
+  browser:
+    image: sufler-ui-audit:pw1.64.1
+    init: true
+    user: "10001:10001"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1100m
+    cpus: 1.0
+    shm_size: 256m
+    pids_limit: 256
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    environment:
+      NODE_OPTIONS: --max-old-space-size=256
+    volumes:
+      - ./scripts:/audit/scripts:ro
+      - ./artifacts:/artifacts
+    restart: "no"
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "2"

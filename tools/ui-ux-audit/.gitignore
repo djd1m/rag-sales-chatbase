@@ -1,0 +1,6 @@
+artifacts/
+notes/
+.private/
+node_modules/
+*.log
+access.json

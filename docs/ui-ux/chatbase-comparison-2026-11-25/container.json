@@ -1,0 +1,21 @@
+{
+  "container": "sufler-ui-audit-browser-1",
+  "image": "sufler-ui-audit:pw1.64.1",
+  "image_id": "sha256:583d373b995075481b5126e8cc5335939655362f2e0c78dab3c1c3374b76a074",
+  "user": "10001:10001",
+  "read_only_rootfs": true,
+  "memory_limit_bytes": 1153433600,
+  "nano_cpus": 1000000000,
+  "shm_bytes": 268435456,
+  "host_ports": {},
+  "mounts": [
+    {
+      "destination": "/audit/scripts",
+      "read_write": false
+    },
+    {
+      "destination": "/artifacts",
+      "read_write": true
+    }
+  ]
+}

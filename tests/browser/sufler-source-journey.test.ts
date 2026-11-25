@@ -430,6 +430,8 @@ it('заполненная установка и отдельный внешни
     await ownPage.getByRole('button', { name: 'Опубликовать страницу' }).click();
     const demo = await ownPage.locator('section[aria-labelledby="publish-title"] a').getAttribute('href');
     if (!demo || new URL(demo).origin !== origin) throw new Error('Нет локальной демо-страницы');
+    await ownPage.screenshot({ path: path.join(artifact, 'bot.png'), fullPage: true });
+    const gallery = await context.newPage(); await gallery.goto(origin + '/dashboard'); await gallery.screenshot({ path: path.join(artifact, 'dashboard.png'), fullPage: true }); await gallery.close();
     const ownBadge = ownPage.waitForResponse(r => r.request().method() === 'POST' && new URL(r.url()).pathname === '/w/v1/event');
     const ownConfig = ownPage.waitForResponse(r => new URL(r.url()).pathname === '/w/v1/config');
     await ownPage.goto(demo);

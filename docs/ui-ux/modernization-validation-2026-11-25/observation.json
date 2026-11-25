@@ -1,5 +1,5 @@
 {
-  "observedAt": "2026-11-25T18:05:26.338Z",
+  "observedAt": "2026-11-25T18:24:40.437Z",
   "revision": "source-sha256:ed43e7c0101296d0d1e85b3504a7fb147f7c59ed0687066814f9008c3bb90415;build:R8u2VkzHPZwAUwGc2g6Yn",
   "engine": "Chromium",
   "version": "156.0.8078.4",
@@ -10,8 +10,8 @@
   "theme": "dark",
   "origin": "https://sufler.test",
   "external": "https://merchant.test",
-  "installPath": "/dashboard/bots/40e61ccf-de99-42bd-ab07-96ffeb9b421d/install",
-  "externalPage": "https://merchant.test/sufler-u09-f277f577-a73b-4a3e-bf71-7c74c48d3712.html",
+  "installPath": "/dashboard/bots/2d31f457-02e0-49cc-aa6c-df6764c0bdff/install",
+  "externalPage": "https://merchant.test/sufler-u09-d9784104-961c-4e31-853d-34ce1b0fbef8.html",
   "clipboardMatched": true,
   "ownOriginEvents": 0,
   "deniedStatus": 403,

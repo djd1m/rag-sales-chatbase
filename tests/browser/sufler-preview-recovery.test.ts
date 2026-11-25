@@ -131,7 +131,7 @@ it('claim failure is announced next to the save action', async () => {
     expect(await alert.count()).toBe(1);
     expect(await alert.getByRole('link', { name: 'Сравнить планы' }).getAttribute('href')).toBe('/pricing');
     expect(await button.getAttribute('aria-describedby')).toBe(await alert.getAttribute('id'));
-    expect(await button.evaluate(el => {
+    await expect.poll(() => button.evaluate(el => {
       const feedback = document.getElementById(el.getAttribute('aria-describedby')!);
       if (!feedback || document.activeElement !== el) return false;
       const a = el.getBoundingClientRect(), b = feedback.getBoundingClientRect();

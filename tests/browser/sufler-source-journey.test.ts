@@ -401,7 +401,7 @@ it('заполненная установка и отдельный внешни
         visitor.locator('n6-sufler .send').click(),
       ]);
       const res = await request.response();
-      if (!res) throw new Error('Внешний виджет отправил вопрос, но не получил HTTP-ответ');
+      if (!res) throw new Error('Внешний виджет: ' + (request.failure()?.errorText ?? 'нет HTTP-ответа'));
       expect(res.status()).toBe(200);
       expect(res.headers()['access-control-allow-origin']).toBe(external);
       return (await res.json()).data;

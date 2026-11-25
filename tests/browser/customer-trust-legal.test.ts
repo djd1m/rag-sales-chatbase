@@ -29,6 +29,7 @@ it('public documents and visitor notice expose the approved Sufler terms and con
     await page.goto(HOST + '/host.html?bot=' + KEY_FREE);
     await page.locator('n6-sufler .bubble').click();
     const panel = page.locator('n6-sufler .panel');
+    await panel.getByText('Об обработке данных', {exact:true}).click();
     await expect.poll(() => panel.innerText()).toContain(readTrustDocument('widget-notice').sections[0]!.paragraphs[0]);
     expect(await panel.locator('a[href$="/legal/privacy"]').getAttribute('href')).toBe(WIDGET + '/legal/privacy');
   } finally { await page.close(); }

@@ -36,7 +36,7 @@ afterEach(() => {
   vi.unstubAllGlobals(); vi.unstubAllEnvs();
 });
 
-it('default customer routes enforce origin before account or provider access', async () => {
+it('anonymous customer routes reject foreign origins before account or provider access', async () => {
   const routes = await Promise.all([
     import('../apps/web/src/app/api/auth/email/confirm/route'),
     import('../apps/web/src/app/api/auth/email/send/route'),

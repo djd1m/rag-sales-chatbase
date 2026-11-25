@@ -19,9 +19,10 @@ import { SummaryBlock, type EraseLogView } from '../../apps/web/src/app/dashboar
 import { SiteHeader } from '../../apps/web/src/app/SiteHeader';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: () => {}, replace: () => {}, refresh: () => {} }) }));
+const engines = process.env.SUFLER_UI_ENGINES === 'chromium' ? { chromium } : { chromium, webkit };
 type Theme = 'dark' | 'light';
 const CSS = readFileSync('apps/web/src/app/globals.css', 'utf8');
-const ARTIFACTS = 'tests/artifacts/account-erasure/browser';
+const ARTIFACTS = `${process.env.SUFLER_UI_ARTIFACT_DIR ?? 'tests/artifacts'}/account-erasure/browser`;
 const FULL: ErasurePreview = { bots: 3, clientBots: 2, paidDaysLeft: 17, partner: { payoutMinor: 150_000, debtMinor: 30_000, hasDetails: true } };
 const PLAIN: ErasurePreview = { bots: 0, clientBots: 0, paidDaysLeft: null, partner: null };
 const SUMMARY = { answered: 12, unknown: 3, refused_limit: 0, not_verified_visitors: 0, last_unknown: [{ text: 'Есть ли доставка в область?', asked_at: '2026-09-26T09:00:00.000Z' }] };
@@ -54,7 +55,7 @@ let bodies: unknown[] = [];
 let server: Server;
 let base: string;
 beforeAll(async () => {
-  try { await preflight(['chromium', 'webkit']); }
+  try { await preflight(Object.keys(engines)); }
   catch (error) { throw new Error(`НЕ ВЫПОЛНЕНО: ${String(error)}`); }
   bundle = buildSync({ stdin: { contents: ENTRY, resolveDir: path.resolve('.'), loader: 'tsx' }, bundle: true, format: 'iife', write: false, jsx: 'automatic',
     define: { 'process.env.NODE_ENV': '"production"' }, logLevel: 'silent',
@@ -89,7 +90,7 @@ afterAll(async () => { if (server) await new Promise<void>((resolve, reject) => 
 const errors = (found: { severity: string; rule: string; axeRule?: string; selector: string; message: string }[]) =>
   found.filter(f => f.severity === 'error').map(f => `${f.rule}${f.axeRule ? '/' + f.axeRule : ''} ${f.selector}: ${f.message}`);
 
-for (const [engineName, engine] of Object.entries({ chromium, webkit })) describe(engineName, () => {
+for (const [engineName, engine] of Object.entries(engines)) describe(engineName, () => {
   let browser: Browser;
   beforeAll(async () => { browser = await engine.launch(); });
   afterAll(async () => { await browser?.close(); });

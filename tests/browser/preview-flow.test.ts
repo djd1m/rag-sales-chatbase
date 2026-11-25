@@ -19,7 +19,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push: () => {}, replace:
 const engines = process.env.SUFLER_UI_ENGINES === 'chromium' ? { chromium } : { chromium, webkit };
 type Theme = 'dark' | 'light';
 const CSS = readFileSync('apps/web/src/app/globals.css', 'utf8');
-const ARTIFACTS = 'tests/artifacts/preview-flow/browser';
+const ARTIFACTS = `${process.env.SUFLER_UI_ARTIFACT_DIR ?? 'tests/artifacts'}/preview-flow/browser`;
 const JOB = '7b1c7a52-5c0e-4f55-9f39-1d3f6a2b8c41';
 const job = (over: Partial<PreviewJobView>): PreviewJobView => ({ index_job_id: JOB, state: 'running', pages_done: 7, pages_total: 20, page_budget: 20, chunks_done: 41, ...over });
 const SITE = { host: 'stomatologia-ulybka.ru', title: 'Стоматология «Улыбка» — лечение и гигиена', h1: 'Лечим зубы без боли с 2009 года',

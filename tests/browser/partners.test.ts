@@ -22,9 +22,10 @@ import { AuthForm } from '../../apps/web/src/app/login/AuthForm';
 import { SiteHeader } from '../../apps/web/src/app/SiteHeader';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: () => {}, replace: () => {}, refresh: () => {} }) }));
+const engines = process.env.SUFLER_UI_ENGINES === 'chromium' ? { chromium } : { chromium, webkit };
 type Theme = 'dark' | 'light';
 const CSS = readFileSync('apps/web/src/app/globals.css', 'utf8');
-const ARTIFACTS = 'tests/artifacts/partner-and-studio/browser';
+const ARTIFACTS = `${process.env.SUFLER_UI_ARTIFACT_DIR ?? 'tests/artifacts'}/partner-and-studio/browser`;
 const ORIGIN = 'https://sufler.test';
 const docs = {terms:readTrustDocument('terms'),consent:readTrustDocument('consent')};
 const documents = {terms:{path:docs.terms.path,version:docs.terms.version},consent:{path:docs.consent.path,version:docs.consent.version}};
@@ -93,7 +94,7 @@ const reply = (route: string, status: number, body: unknown) => { (api.replies[r
 let server: Server;
 let base: string;
 beforeAll(async () => {
-  try { await preflight(['chromium', 'webkit']); }
+  try { await preflight(Object.keys(engines)); }
   catch (error) { throw new Error(`НЕ ВЫПОЛНЕНО: ${String(error)}`); }
   const built = buildSync({ stdin: { contents: ENTRY, resolveDir: path.resolve('.'), loader: 'tsx' }, bundle: true, format: 'iife', write: false,
     jsx: 'automatic', define: { 'process.env.NODE_ENV': '"production"' }, logLevel: 'silent',
@@ -138,7 +139,7 @@ afterAll(async () => { if (server) await new Promise<void>((resolve, reject) => 
 const errors = (found: { severity: string; rule: string; axeRule?: string; selector: string; message: string }[]) =>
   found.filter(f => f.severity === 'error').map(f => `${f.rule}${f.axeRule ? '/' + f.axeRule : ''} ${f.selector}: ${f.message}`);
 
-for (const [engineName, engine] of Object.entries({ chromium, webkit })) describe(engineName, () => {
+for (const [engineName, engine] of Object.entries(engines)) describe(engineName, () => {
   let browser: Browser;
   beforeAll(async () => { browser = await engine.launch(); });
   afterAll(async () => { await browser?.close(); });

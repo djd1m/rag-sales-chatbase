@@ -8,6 +8,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createElement, Fragment, type ReactElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { chromium, webkit, type Browser, type Page } from 'playwright';
+import { PAGES_BY_PLAN } from '@n6/rag';
 import { domRules, axeRule, textZoomRule, firstScreenRule, firstScreenSelectors, FIRST_SCREEN_VIEWPORTS } from '../../scripts/responsive/rules.mjs';
 import { preflight } from '../../scripts/responsive/input.mjs';
 import { Landing } from '../../apps/web/src/app/Landing';
@@ -25,7 +26,7 @@ const CSS = readFileSync('apps/web/src/app/globals.css', 'utf8');
 const fontCSS = ['cyrillic','latin'].map(script =>
   `@font-face {font-family:Onest-${script};src:url('/${script}.woff2');font-weight:100 900;}`).join('')
   + ':root {--font-onest-cyr:Onest-cyrillic;--font-onest-lat:Onest-latin;}';
-const ARTIFACTS = 'tests/artifacts/design-shell/browser';
+const ARTIFACTS = `${process.env.SUFLER_UI_ARTIFACT_DIR ?? 'tests/artifacts'}/design-shell/browser`;
 // Те же обёртки, что у page.tsx каждого маршрута (layout.tsx: <html lang data-theme>, viewport без запрета зума).
 const documents = { terms: { version: readTrustDocument('terms').version, path: '/legal/terms' },
   consent: { version: readTrustDocument('consent').version, path: '/legal/consent' } };
@@ -116,12 +117,22 @@ for (const [engineName, engine] of Object.entries(engines)) describe(engineName,
         const day = page.getByRole('row', { name: /Ответов в сутки на бота/ });
         expect(await day.locator('td').allTextContents()).toEqual(['17','83','83']);
         expect(await page.getByRole('row', { name: /Ответов в месяц на бота/ }).locator('td').allTextContents()).toEqual(['257','941','941']);
+        const pageBudgets = [PAGES_BY_PLAN.free, PAGES_BY_PLAN.nobadge, PAGES_BY_PLAN.studio].map(value => value.toLocaleString('ru-RU'));
+        const budgetRow = page.getByRole('row', { name: /Страниц за чтение сайта/ });
+        expect(await budgetRow.locator('td').allTextContents()).toEqual(pageBudgets);
+        expect(await page.getByText('Страниц на бота').count()).toBe(0);
         for (const [i, d, m, href] of [[0,17,257,'/#site-url'],[1,83,941,'/upgrade?plan=nobadge'],[2,83,941,'/upgrade?plan=studio']] as const) {
           const plan = page.locator('.plan').nth(i);
           expect(await plan.textContent()).toContain(`Ответов в сутки на бота: ${d}`);
           expect(await plan.textContent()).toContain(`Ответов в месяц на бота: ${m}`);
+          expect(await plan.getByText(`Страниц за чтение сайта: ${pageBudgets[i]}`, { exact: true }).isVisible()).toBe(true);
           expect(await plan.getByRole('link').getAttribute('href')).toBe(href);
         }
+        const periods = page.locator('details').filter({ hasText: 'Как считаются периоды и страницы?' });
+        await periods.locator('summary').click();
+        const explanation = periods.locator('p');
+        expect(await explanation.isVisible()).toBe(true);
+        expect(await explanation.textContent()).toMatch(/календарным суткам и месяцам Москвы.*одно чтение источника сайта.*30 дней/);
       }));
     // R9: поле «адрес сайта» и «Создать бота» — в первом экране телефона, каждый селектор отдельно, до прокрутки.
     for (const { w, h } of FIRST_SCREEN_VIEWPORTS) it(`R9 / ${theme} ${w}x${h}: поле адреса и «Создать бота» в первом экране`,

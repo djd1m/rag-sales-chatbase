@@ -12,7 +12,8 @@ import { chromium, firefox, webkit, type Browser, type BrowserContext, type Page
 import AxeBuilder from '@axe-core/playwright';
 import { ANSWER, CONTACT, HOST, KEY_FREE, KEY_PAID, KEY_UNVERIFIED, STRANGER, VISITOR_LIMIT, WIDGET, startHarness, type Harness } from './widget-harness';
 
-const ARTIFACTS = 'tests/artifacts/widget-runtime-and-badge/browser';
+const engines = process.env.SUFLER_UI_ENGINES === 'chromium' ? { chromium } : { chromium, firefox, webkit };
+const ARTIFACTS = `${process.env.SUFLER_UI_ARTIFACT_DIR ?? 'tests/artifacts'}/widget-runtime-and-badge/browser`;
 mkdirSync(ARTIFACTS, { recursive: true });
 let harness: Harness;
 beforeAll(async () => { harness = await startHarness(); });
@@ -21,7 +22,7 @@ afterAll(async () => { await harness?.close(); });
 // Внутренности теневого корня читаются через открытый shadowRoot — так же, как их может читать скрипт хозяина.
 const inShadow = <T>(page: Page, fn: (root: ShadowRoot) => T) => page.evaluate(fn as never) as Promise<T>;
 
-for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })) describe(engineName, () => {
+for (const [engineName, engine] of Object.entries(engines)) describe(engineName, () => {
   let browser: Browser;
   beforeAll(async () => { browser = await engine.launch(); });
   afterAll(async () => { await browser?.close(); });

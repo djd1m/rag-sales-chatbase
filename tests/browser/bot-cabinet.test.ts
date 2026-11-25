@@ -22,7 +22,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push: () => {}, replace:
 const engines = process.env.SUFLER_UI_ENGINES === 'chromium' ? { chromium } : { chromium, webkit };
 type Theme = 'dark' | 'light';
 const CSS = readFileSync('apps/web/src/app/globals.css', 'utf8');
-const ARTIFACTS = 'tests/artifacts/bot-cabinet/browser';
+const ARTIFACTS = `${process.env.SUFLER_UI_ARTIFACT_DIR ?? 'tests/artifacts'}/bot-cabinet/browser`;
 const BOT = '7b1c7a52-5c0e-4f55-9f39-1d3f6a2b8c41';
 const ORIGIN = 'https://sufler.example';
 const noop = () => {};

@@ -20,9 +20,10 @@ import { Pricing } from '../../apps/web/src/app/pricing/Pricing';
 import { SiteHeader } from '../../apps/web/src/app/SiteHeader';
 import type { ReturnState } from '../../apps/web/src/lib/payment-return';
 
+const engines = process.env.SUFLER_UI_ENGINES === 'chromium' ? { chromium } : { chromium, webkit };
 type Theme = 'dark' | 'light';
 const CSS = readFileSync('apps/web/src/app/globals.css', 'utf8');
-const ARTIFACTS = 'tests/artifacts/tariffs-and-interest/browser';
+const ARTIFACTS = `${process.env.SUFLER_UI_ARTIFACT_DIR ?? 'tests/artifacts'}/tariffs-and-interest/browser`;
 const INTENT = '3f2b1c7a-5c0e-4f55-9f39-1d3f6a2b8c41';
 const FREE = { plan: 'free', plan_source: 'none', plan_paid_until: null };
 const upgrade = (over: Partial<UpgradeProps>): UpgradeProps => ({ plan: 'nobadge', title: 'Без бейджа', price: '990 ₽', paymentsOn: true, verified: true, offerVersion: 'V1', current: FREE, ...over });
@@ -60,7 +61,7 @@ const reset = () => { api = { checkout: [], checkoutBodies: [], interestBodies: 
 let server: Server;
 let base: string;
 beforeAll(async () => {
-  try { await preflight(['chromium', 'webkit']); }
+  try { await preflight(Object.keys(engines)); }
   catch (error) { throw new Error(`НЕ ВЫПОЛНЕНО: ${String(error)}`); }
   const built = buildSync({ stdin: { contents: ENTRY, resolveDir: path.resolve('.'), loader: 'tsx' }, bundle: true, format: 'iife', write: false,
     jsx: 'automatic', define: { 'process.env.NODE_ENV': '"production"' }, logLevel: 'silent' });
@@ -101,7 +102,7 @@ afterAll(async () => { if (server) await new Promise<void>((resolve, reject) => 
 const errors = (found: { severity: string; rule: string; axeRule?: string; selector: string; message: string }[]) =>
   found.filter(f => f.severity === 'error').map(f => `${f.rule}${f.axeRule ? '/' + f.axeRule : ''} ${f.selector}: ${f.message}`);
 
-for (const [engineName, engine] of Object.entries({ chromium, webkit })) describe(engineName, () => {
+for (const [engineName, engine] of Object.entries(engines)) describe(engineName, () => {
   let browser: Browser;
   beforeAll(async () => { browser = await engine.launch(); });
   afterAll(async () => { await browser?.close(); });

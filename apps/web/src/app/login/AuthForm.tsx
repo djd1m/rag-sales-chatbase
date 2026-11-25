@@ -12,8 +12,8 @@ const claimMessages: Record<string, string> = {
   unavailable: 'Не удалось сохранить предпросмотр.', plan_limit: 'Предел текущего плана не позволил сохранить предпросмотр.',
 };
 
-export function AuthForm({ initialMode = 'login', next = null, documents }: {
-  initialMode?: 'login' | 'register'; next?: string | null; documents?: Documents;
+export function AuthForm({ initialMode = 'login', next = null, documents, recoveryAvailable = false }: {
+  initialMode?: 'login' | 'register'; next?: string | null; documents?: Documents; recoveryAvailable?: boolean;
 }) {
   const [register, setRegister] = useState(initialMode === 'register'), [busy, setBusy] = useState(false);
   const [visible, setVisible] = useState(false), [error, setError] = useState(''), [codeError, setCodeError] = useState('');
@@ -73,7 +73,7 @@ export function AuthForm({ initialMode = 'login', next = null, documents }: {
     <label>Почта<input id="auth-email" name="email" type="email" autoComplete="email" required /></label>
     <label>Пароль<input name="password" type={visible ? 'text' : 'password'} minLength={8} autoComplete={register ? 'new-password' : 'current-password'} required /></label>
     <button type="button" className="text-button" aria-pressed={visible} onClick={() => setVisible(!visible)}>{visible ? 'Скрыть пароль' : 'Показать пароль'}</button>
-    {!register && <p><a href="/forgot">Забыли пароль?</a></p>}
+    {!register && recoveryAvailable && <p><a className="button secondary" href="/forgot">Забыли пароль?</a></p>}
     {register && <>
       <p className="muted">Пароль — от 8 символов, до 72 байт.</p>
       <label>Код партнёра или студии (если есть)<input name="partner_code" type="text" maxLength={40} autoComplete="off" spellCheck={false}

@@ -10,6 +10,36 @@ import path from 'node:path';
 
 const origin = 'https://sufler.test';
 let browser: Browser, bundle: string;
+
+it('login password visibility works with Enter and Space without losing input or submitting', async () => {
+  for (const mode of ['login', 'register']) {
+    const page = await browser.newPage({ ignoreHTTPSErrors: true });
+    let posts = 0;
+    page.on('request', request => { if (request.method() === 'POST') posts++; });
+    try {
+      await page.goto(origin + '/login' + (mode === 'register' ? '?mode=register' : ''));
+      const password = page.getByLabel('Пароль', { exact: true });
+      await password.fill('synthetic-password');
+      await password.press('Tab');
+      const show = page.getByRole('button', { name: 'Показать пароль', exact: true });
+      expect(await show.evaluate(element => element === document.activeElement)).toBe(true);
+      await show.press('Enter');
+      const hide = page.getByRole('button', { name: 'Скрыть пароль', exact: true });
+      expect(await password.getAttribute('type')).toBe('text');
+      expect(await password.inputValue()).toBe('synthetic-password');
+      expect(await hide.getAttribute('aria-pressed')).toBe('true');
+      expect(await hide.evaluate(element => element === document.activeElement)).toBe(true);
+      await hide.press('Space');
+      expect(await password.getAttribute('type')).toBe('password');
+      expect(await password.inputValue()).toBe('synthetic-password');
+      expect(await show.getAttribute('aria-pressed')).toBe('false');
+      expect(await show.evaluate(element => element === document.activeElement)).toBe(true);
+      expect(posts).toBe(0);
+      expect(await page.getByRole('link', { name: 'Забыли пароль?' }).count()).toBe(mode === 'login' ? 1 : 0);
+    } finally { await page.close(); }
+  }
+});
+
 beforeAll(async () => {
   bundle = buildSync({
     stdin: {

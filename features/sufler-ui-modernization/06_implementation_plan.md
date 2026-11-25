@@ -133,6 +133,10 @@ AM-11 (observed U09 clipboard denial): Keep the installation workflow. A denied 
 
 AM-12 (observed footer and pricing scope): Align legal navigation with the page content. Describe pages per site reading and answer periods per Moscow calendar day/month separately from the paid 30 days; prices and enforced limits stay unchanged. Confirmation: → test `тарифы соответствуют переданным лимитам и работающим CTA` in `tests/browser/design-shell.test.ts` (fails if reverted).
 
+AM-13 (FR-4 traceability review): Login advertises password recovery only when email delivery is configured; the support page gives the same honest availability. Direct recovery URLs keep their explicit disabled state. Confirmation: → test `login advertises recovery only when email delivery is configured` in `tests/theme.test.ts` (fails if reverted).
+
+AM-14 (FR-4 keyboard evidence): Native password buttons keep field contents and button focus, expose their pressed state and never submit while switching with Enter or Space in either account mode. Confirmation: → test `login password visibility works with Enter and Space without losing input or submitting` in `tests/browser/customer-trust-auth.test.ts` (fails if reverted).
+
 ## File ownership
 
 Ниже точные кодовые цели. Путь из блока не даёт право менять файл другого писателя. В [реестре](06_ownership.md) определены границы, новые имена и неизменяемые регрессионные зависимости.
@@ -176,6 +180,7 @@ EXPECTED_CODE_TARGETS:
 - tests/browser/bot-cabinet.test.ts
 - tests/browser/gate-onboarding.test.ts
 - tests/browser/sufler-source-journey.test.ts
+- tests/browser/customer-trust-auth.test.ts
 - tests/browser/sufler-preview-recovery.test.ts
 - tests/fixtures/sufler-source-journey.ts
 - tests/fixtures/sufler-ui-test-transport.mjs

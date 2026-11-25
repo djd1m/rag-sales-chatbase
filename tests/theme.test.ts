@@ -8,7 +8,17 @@ import { THEME_COLOR, themeCookie, themeFromCookie } from '../apps/web/src/lib/t
 import { ThemeToggle } from '../apps/web/src/app/ThemeToggle';
 import { Landing } from '../apps/web/src/app/Landing';
 import { Pricing, plansFor } from '../apps/web/src/app/pricing/Pricing';
+import { AuthForm } from '../apps/web/src/app/login/AuthForm';
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: () => {}, refresh: () => {} }) }));
+
+it('login advertises recovery only when email delivery is configured', () => {
+  for (const recoveryAvailable of [undefined, false, true]) {
+    const html = renderToStaticMarkup(createElement(AuthForm, { recoveryAvailable }));
+    expect(html.includes('href="/forgot"')).toBe(recoveryAvailable === true);
+    expect(html).toContain('Войти');
+  }
+  expect(renderToStaticMarkup(createElement(AuthForm, { recoveryAvailable: true, initialMode: 'register' }))).not.toContain('href="/forgot"');
+});
 
 describe('themeFromCookie — тёмная, кроме ровно одной пары n6_theme=light (fail-closed)', () => {
   it('явный выбор светлой', () => {

@@ -88,7 +88,9 @@ function gradeSide(run, side, pair, fail) {
     if (samples.length !== (warmupMs + measuredMs) / every || samples.some((sample, index) =>
       sample.i !== index || sample.phase !== (index * every < warmupMs ? 'warmup' : 'measured')
       || sample.kind !== (lane === 'customer' ? customerSchedule(side, index) : lane)
-      || !finite(sample.lagMs) || sample.lagMs >= cadence.rag
+      // Node truncates fractional timer delays; libuv also floors its loop clock.
+      // Keep signed jitter, allowing only those two milliseconds of early firing.
+      || !Number.isFinite(sample.lagMs) || sample.lagMs < -2 || sample.lagMs >= cadence.rag
       || !finite(sample.ms))) fail(lane + ' cadence or timings');
   }
 
@@ -171,7 +173,7 @@ export function gradeReport(report) {
     comparisons[kind] = { baseline: medians.baseline, current: medians.current, limit };
     if (limit === null || medians.current === null || medians.current > limit) failures.add(kind + ' comparative p95');
   }
-  return { ok: failures.size === 0, failures: [...failures], comparisons, results };
+  return { analysisVersion: 2, ok: failures.size === 0, failures: [...failures], comparisons, results };
 }
 
 function command(program, args, { timeout = 45_000, cwd = root } = {}) {

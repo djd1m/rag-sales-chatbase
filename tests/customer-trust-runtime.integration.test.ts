@@ -134,6 +134,21 @@ test('isolated workload rejects p95 and memory regression against baseline', () 
   }
 });
 
+test('signed timer jitter permits only two early milliseconds and retains the late deadline', () => {
+  for (const lagMs of [-2, -1.99, 0, 999.99]) {
+    const report = specimen();
+    for (const pair of report.pairs) for (const side of [pair.baseline, pair.current])
+      for (const lane of [side.workload.rag, side.workload.job, side.workload.customer]) lane[0]!.lagMs = lagMs;
+    expect(gradeReport(report).ok, String(lagMs)).toBe(true);
+  }
+  for (const lagMs of [-2.01, 1000, NaN, Infinity, -Infinity]) {
+    for (const name of ['rag', 'job', 'customer'] as const) {
+      const report = specimen(); report.pairs[0]!.current.workload[name][0]!.lagMs = lagMs;
+      expect(gradeReport(report).failures, name + ':' + String(lagMs)).toContain('pair 1 current ' + name + ' cadence or timings');
+    }
+  }
+});
+
 test('isolated trust harness denies external egress and counts fake calls', async () => {
   const server = createLoadFake({ timeoutEvery: 5 });
   server.listen(0, '127.0.0.1');

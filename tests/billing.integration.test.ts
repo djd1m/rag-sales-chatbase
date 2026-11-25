@@ -8,6 +8,7 @@ import { readTrustDocument } from '../apps/web/src/lib/trust-legal-catalog';
 import { createHash, randomBytes } from 'node:crypto';
 import { createPool, expirePaidPlans, setPlanByOperator, type Pool } from '../packages/db/src/index';
 import { migrate } from '../packages/db/src/migrate';
+import { createPaymentIntent } from '../packages/db/src/payments';
 import { createBillingDependencies } from '../apps/web/src/server/billing-deps';
 import { createCheckoutHandler, createCheckoutStatusHandler, createInterestHandler, createPaymentWebhookHandler } from '../apps/web/src/server/billing-handler';
 import { createYooKassaProvider } from '../apps/web/src/server/payments/yookassa';
@@ -458,6 +459,18 @@ describe.skipIf(!databaseUrl)('оплата ЮKassa и интерес на на�
       const after = (await pool.query('SELECT checkout_snapshot,first_post_at,provider_payment_id FROM payment_intent WHERE id=$1', [intent])).rows[0];
       expect(after).toEqual({ ...before, provider_payment_id: null });
     } finally { release(); clock.mockRestore(); }
+  });
+
+  it('legacy payment intent reuse preserves one original row and rejects a different plan', async () => {
+    const a = await account(), idempotencyKey = key();
+    const input = { accountId: a.id, plan: 'nobadge' as const, priceMinor: 99000, idempotencyKey };
+    const first = await createPaymentIntent(pool, input);
+    expect(first.kind).toBe('created');
+    if (first.kind !== 'created') throw new Error('Expected initial intent');
+    const repeated = await createPaymentIntent(pool, input);
+    expect(repeated).toEqual({ kind: 'existing', intent: first.intent });
+    expect(await createPaymentIntent(pool, { ...input, plan: 'studio', priceMinor: 299000 })).toEqual({ kind: 'conflict' });
+    expect(await count('SELECT count(*) AS n FROM payment_intent WHERE account_id=$1', [a.id])).toBe(1);
   });
 
 });

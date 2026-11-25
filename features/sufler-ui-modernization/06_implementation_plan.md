@@ -139,9 +139,12 @@ AM-14 (FR-4 keyboard evidence): Native password buttons keep field contents and 
 
 AM-15 (FR-3 traceability evidence): The ordinary manual creation form preserves entered values when collapsed and reopened and after a real field-validation error; successful creation opens the issued bot at the source section. Confirmation: → test `ручное создание из пустого кабинета сохраняет ввод при сворачивании и ошибке поля` in `tests/browser/sufler-preview-recovery.test.ts` (fails if reverted).
 
+AM-16 (coverage measurement validity): An unimported-file V8 all:true fallback assigns counters to comments, blanks and erased TypeScript. Preserve those invalid projection attempts; obtain actual transformed counters using meaningful default HTTP boundary and server-rendered UI contracts plus focused browser recovery transitions. Never count fallback physical lines as established executable-line percentages. Confirmation: → test `default customer routes enforce origin before account or provider access` in `tests/customer-trust-boundaries.unit.test.ts` and test `server-rendered preview and recovery surfaces do not disclose private state` in `tests/customer-trust-ssr.unit.test.ts` (fails if reverted).
+
 ## File ownership
 
 Ниже точные кодовые цели. Путь из блока не даёт право менять файл другого писателя. В [реестре](06_ownership.md) определены границы, новые имена и неизменяемые регрессионные зависимости.
+
 
 EXPECTED_CODE_TARGETS:
 - apps/web/src/app/TrustSiteFooter.tsx
@@ -186,3 +189,7 @@ EXPECTED_CODE_TARGETS:
 - tests/browser/sufler-preview-recovery.test.ts
 - tests/fixtures/sufler-source-journey.ts
 - tests/fixtures/sufler-ui-test-transport.mjs
+- tests/customer-trust-boundaries.unit.test.ts
+- tests/customer-trust-ssr.unit.test.ts
+- tests/browser/sufler-ux-recovery-branches.test.ts
+- tests/customer-trust-css.d.ts

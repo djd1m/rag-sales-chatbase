@@ -231,10 +231,17 @@ export function createYooKassaProvider(options: YooKassaOptions): PaymentProvide
       });
   }
 
-  async function attestEnvironment() {
-    const settings = await request('/me');
-    verify(settings.account_id === shopId && settings.test === testMode,
-      'настройки магазина не совпадают с настроенным окружением');
+  // A successful attestation belongs to these immutable constructor credentials.
+  // Share it across concurrent creates; a failed probe is never cached. A second
+  // network probe after durable intent admission could strand a no-POST order.
+  let attestation: Promise<void> | undefined;
+  async function attestEnvironment(): Promise<void> {
+    attestation ??= (async () => {
+      const settings = await request('/me');
+      verify(settings.account_id === shopId && settings.test === testMode,
+        'настройки магазина не совпадают с настроенным окружением');
+    })().catch(error => { attestation = undefined; throw error; });
+    return attestation;
   }
 
   return Object.freeze({

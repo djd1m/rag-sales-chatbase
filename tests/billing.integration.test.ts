@@ -420,4 +420,17 @@ describe.skipIf(!databaseUrl)('оплата ЮKassa и интерес на на�
     } finally {await remote.close();}
   });
 
+  it('one immutable shop attestation admits checkout without a second pre-POST failure', async () => {
+    const a=await account(); let probes=0, posts=0;
+    const adapter=createYooKassaProvider({fiscal,shopId:SHOP_ID,secretKey:SECRET,testMode:true,
+      fetchImpl:async(url,init)=>{
+        if(String(url).endsWith('/me')) {probes++;return probes===1?Response.json({account_id:SHOP_ID,test:true}):new Response(null,{status:503});}
+        posts++;return fetch(yk.apiBase+'/payments',init);
+      }});
+    const w=wire(adapter);
+    expect((await w.checkout(a.token,{plan:'nobadge',idempotency_key:key()})).status).toBe(201);
+    expect(probes).toBe(1); expect(posts).toBe(1);
+    expect(await count("SELECT count(*) AS n FROM payment_intent WHERE account_id=$1 AND provider_payment_id IS NOT NULL",[a.id])).toBe(1);
+  });
+
 });

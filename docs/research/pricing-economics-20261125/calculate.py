@@ -120,7 +120,7 @@ for plan, workload in product(PLANS[:2], RATES):
 
 def write_csv(name, rows):
     with (ROOT / name).open('w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(f, fieldnames=list(rows[0]), lineterminator="\n")
         writer.writeheader()
         writer.writerows({k: text(v) for k,v in row.items()} for row in rows)
 

@@ -40,8 +40,8 @@ export const answerScopes = {
 export function customerSchedule(side, index) {
   return (side === 'baseline' ? ['login', 'checkout'] : ['forgot', 'verify', 'checkout', 'authority'])[index % (side === 'baseline' ? 2 : 4)];
 }
-export function providerSteps(side, kind) {
-  if (side === 'current' && kind === 'checkout') return ['checkout_attest', 'checkout_attest', 'checkout'];
+export function providerSteps(side, kind, attested = false) {
+  if (side === 'current' && kind === 'checkout') return attested ? ['checkout'] : ['checkout_attest', 'checkout'];
   return ['verify', 'forgot', 'checkout'].includes(kind) ? [kind] : [];
 }
 

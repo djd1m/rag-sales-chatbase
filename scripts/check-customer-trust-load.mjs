@@ -104,16 +104,16 @@ function gradeSide(run, side, pair, fail) {
     || !finite(auditBefore?.answer) || audit?.answer - auditBefore?.answer !== 720
     || !finite(audit?.embed) || audit.embed - auditBefore.embed < 732) fail('provider counters, paid calls or egress');
 
-  let externalIndex = 0;
+  let externalIndex = 0, attested = false;
   for (const sample of workload.customer ?? []) {
     let expectedError;
-    for (const [step, kind] of providerSteps(side, sample.kind).entries()) {
+    for (const [step, kind] of providerSteps(side, sample.kind, attested).entries()) {
       const fake = audit?.external?.[externalIndex++];
       const timeout = pair === 3 && externalIndex % 5 === 0;
       if (fake?.kind !== kind || fake.timeout !== timeout || !finite(fake.ms)
         || (timeout ? (!fake.clientAborted || fake.ms < 4500 || fake.ms > 5250)
           : (fake.clientAborted !== false || fake.ms < 45))) fail('external HTTP scenario or timeout deadline');
-      if (!timeout) continue;
+      if (!timeout) { if (kind === 'checkout_attest') attested = true; continue; }
       if (sample.kind === 'verify') expectedError = 'delivery_unknown';
       if (sample.kind === 'checkout') expectedError = kind === 'checkout_attest' && step === 0
         ? 'unavailable' : 'payment_provider_unavailable';

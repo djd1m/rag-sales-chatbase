@@ -16,15 +16,16 @@ function specimenSide(side: Side, pair: number) {
   ]));
   const external: { kind: string; timeout: boolean; clientAborted: boolean; ms: number }[] = [];
   const healthy = { login: 200, checkout: 201, forgot: 202, verify: 202, authority: 200 };
+  let attested = false;
   const customer = sequences.customer!.map(sample => {
     const kind = customerSchedule(side, sample.i) as keyof typeof healthy;
     let error = null;
-    for (const [step, endpoint] of providerSteps(side, kind).entries()) {
+    for (const [step, endpoint] of providerSteps(side, kind, attested).entries()) {
       const timeout = pair === 3 && (external.length + 1) % 5 === 0;
       external.push({ kind: endpoint, timeout, clientAborted: timeout, ms: timeout ? 5000 : 50 });
-      if (!timeout) continue;
+      if (!timeout) { if (endpoint === 'checkout_attest') attested = true; continue; }
       if (kind === 'verify') error = 'delivery_unknown';
-      if (kind === 'checkout') error = side === 'current' && step === 0 ? 'unavailable' : 'payment_provider_unavailable';
+      if (kind === 'checkout') error = endpoint === 'checkout_attest' ? 'unavailable' : 'payment_provider_unavailable';
       break;
     }
     return { ...sample, kind, status: error ? 503 : healthy[kind], valid: !error, code: error || null, ms: error ? 5100 : 100 };

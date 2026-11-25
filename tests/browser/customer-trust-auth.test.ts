@@ -144,7 +144,7 @@ it('recovery fragments are POST only and safe PDF continuation stays available',
     await expect.poll(async () => (await pool.query("SELECT 1 FROM customer_email_proof WHERE email=$1 AND purpose='reset' AND active", [owner.email])).rowCount).toBe(1);
     const reset = new URLSearchParams(new URL(resetURL).hash.slice(1)).get('token')!;
     await page.goto(resetURL);
-    const input = main.getByLabel('Новый пароль', { exact: true });
+    const input = main.locator('input[name=password]');
     await input.fill('я'.repeat(37));
     await main.getByRole('button', { name: 'Сменить пароль' }).click();
     await expect.poll(() => main.getByRole('alert').textContent()).toContain('72 байт');

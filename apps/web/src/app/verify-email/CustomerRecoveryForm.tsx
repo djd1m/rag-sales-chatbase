@@ -15,23 +15,30 @@ export function CustomerRecoveryForm({ mode, authenticated = false, verified = f
   const [phase, setPhase] = useState<Phase>('loading');
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [visible, setVisible] = useState(false);
   const mounted = useRef(false);
+  const generation = useRef(0);
   const verify = mode === 'verify-email';
   const destination = safeNextPath(next);
   const continuation = destination?.startsWith('/invite/') ? null : destination;
 
   useEffect(() => {
     mounted.current = true;
-    const hash = location.hash;
-    if (hash) {
-      history.replaceState(history.state, '', location.pathname + location.search);
-      token.current = /^#token=([A-Za-z0-9_-]{43})$/.exec(hash)?.[1] ?? null;
+    function readFragment() {
+      const hash = location.hash;
+      if (hash) {
+        generation.current++;
+        history.replaceState(history.state, '', location.pathname + location.search);
+        token.current = /^#token=([A-Za-z0-9_-]{43})$/.exec(hash)?.[1] ?? null;
+        setError(''); setBusy(false); setVisible(false);
+      }
+      if (mode === 'forgot') setPhase('request');
+      else if (verify && !authenticated) setPhase('login');
+      else if (token.current) setPhase('proof');
+      else if (verify && !hash) setPhase(verified ? 'done' : 'request');
+      else setPhase('invalid');
     }
-    if (mode === 'forgot') setPhase('request');
-    else if (verify && !authenticated) setPhase('login');
-    else if (token.current) setPhase('proof');
-    else if (verify && !hash) setPhase(verified ? 'done' : 'request');
-    else setPhase('invalid');
-    return () => { mounted.current = false; };
+    readFragment();
+    window.addEventListener('hashchange', readFragment);
+    return () => { mounted.current = false; generation.current++; window.removeEventListener('hashchange', readFragment); };
   }, [mode, verify, authenticated, verified]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -44,6 +51,8 @@ export function CustomerRecoveryForm({ mode, authenticated = false, verified = f
     const payload = sending ? (continuation ? { next: continuation } : {}) : confirming ? { token: token.current }
       : mode === 'reset' ? { token: token.current, password: form.get('password') } : { email: form.get('email') };
     setBusy(true); setError('');
+    const turn = generation.current;
+    const current = () => mounted.current && turn === generation.current;
     const controller = new AbortController();
     const timeout = sending ? setTimeout(() => controller.abort(), 8000) : undefined;
     try {
@@ -52,7 +61,7 @@ export function CustomerRecoveryForm({ mode, authenticated = false, verified = f
         headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       });
       const body = await response.json().catch(() => null);
-      if (!mounted.current) return;
+      if (!current()) return;
       if (!response.ok) {
         const problem = errorOf(body);
         if (response.status === 401 && verify) { setPhase('login'); return; }
@@ -70,9 +79,9 @@ export function CustomerRecoveryForm({ mode, authenticated = false, verified = f
       }
       setError('Не удалось подтвердить результат. Проверьте состояние ещё раз.');
     } catch {
-      if (mounted.current) setError(sending ? 'Не удалось узнать результат отправки. Проверьте почту или повторите запрос позже.'
+      if (current()) setError(sending ? 'Не удалось узнать результат отправки. Проверьте почту или повторите запрос позже.'
         : 'Нет связи с сервером. Попробуйте ещё раз.');
-    } finally { clearTimeout(timeout); if (mounted.current) setBusy(false); }
+    } finally { clearTimeout(timeout); if (current()) setBusy(false); }
   }
 
   const title = verify ? 'Подтверждение почты' : mode === 'forgot' ? 'Восстановление доступа' : 'Новый пароль';
